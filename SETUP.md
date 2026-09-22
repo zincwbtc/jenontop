@@ -65,10 +65,13 @@ Add an item, proceed to checkout, and use a test username and email.
 - Approved fixture: `4242 4242 4242 4242`
 - Declined fixture: `4000 0000 0000 0002`
 - Both: expiry `12/34`, CVC `123`
+- Demo purchase confirmation: click **Reveal demo code** and enter `246810`. No SMS is sent.
+
+Billing address is optional and is stored with the private order record. It is not included in webhook events. Apply migration `0003_billing_address.sql` before deploying this version of the backend.
 
 Only those exact synthetic fixtures are accepted on the server. There are no real card charges, bank verification or item deliveries. The wallet button connects an address only; it never requests a signature or transaction.
 
-Discord receives an embed marked TEST MODE with synthetic card data and sample order information. Test username and email are not forwarded. The order screen and dashboard show the payload and delivery status. HTTP 2xx means the message was accepted, not that a bank approved a payment. Keep the private tracking key to retrieve an order later.
+Discord receives an embed marked TEST MODE with synthetic card data, the fixed demo code, and sample order information. Username, email and billing address are not forwarded. The order screen and dashboard show the payload and delivery status. HTTP 2xx means the message was accepted, not that a bank approved a payment. Keep the private tracking key to retrieve an order later.
 
 The original private hosted store remains separate. This package does not automatically reuse its database or its hosted secrets.
 
