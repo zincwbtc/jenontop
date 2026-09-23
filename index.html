@@ -7,8 +7,8 @@
   <meta name="description" content="Explore offers, find your next challenge, and keep your Lootlane rewards in one place.">
   <title>Lootlane Rewards</title>
   <link rel="icon" href="assets/lootlane-mark.svg" type="image/svg+xml">
-  <link rel="stylesheet" href="support.css?v=20260923b">
-  <script src="dashboard.js?v=20260923b" defer></script>
+  <link rel="stylesheet" href="support.css?v=20260923c">
+  <script src="dashboard.js?v=20260923c" defer></script>
 </head>
 <body>
   <svg class="icon-library" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
@@ -50,18 +50,20 @@
       <div class="section-heading"><span class="kicker">THE REWARD ARCADE</span><h2 id="offersTitle">Find your next adventure.</h2><p>Explore available offers from Offerwall.GG. Check each offer's eligibility and requirements before starting.</p></div>
       <div class="offerwall-shell">
         <div class="wall-toolbar"><span class="wall-brand"><span class="status-dot"></span> Offerwall.GG</span><a id="offerwallOpen" class="text-link" target="_blank" rel="noopener noreferrer">Open in a new tab <span aria-hidden="true">&#8599;</span></a></div>
+        <p id="earningIdentity" class="wall-footnote"></p>
         <div class="offerwall-frame"><div class="wall-placeholder" id="wallPlaceholder"><svg class="coin-icon" aria-hidden="true"><use href="#icon-coin"/></svg><p id="wallStatus" role="status">Getting your rewards ready...</p><button class="secondary" type="button" id="loadOffers">Load offers</button></div><iframe id="offerwallFrame" title="Lootlane offers from Offerwall.GG" referrerpolicy="strict-origin-when-cross-origin" hidden></iframe></div>
-        <p class="wall-footnote">Offers missing or slow to load? Use the new-tab link above. Availability depends on the provider.</p>
+        <p class="wall-footnote" id="wallLoadNote">Offers missing or slow to load? Use the new-tab link above. Availability depends on the provider.</p>
       </div>
     </section>
     <section id="dashboard" class="section dashboard" aria-labelledby="dashboardTitle">
       <div class="section-heading"><span class="kicker">YOUR PLAYER SPACE</span><h2 id="dashboardTitle">Everything in one place.</h2><p id="profileNote">Save your username to personalize this browser.</p></div>
       <div class="dashboard-grid">
         <div><span class="stat-label">Player</span><strong id="dashboardUsername">Not logged in</strong><button class="text-link" type="button" data-login>Set username</button></div>
-        <div><span class="stat-label">Saved balance</span><strong><span id="balance">0</span> <small>Robux</small></strong><span class="stat-note">Browser preview</span></div>
-        <div><span class="stat-label">Completed surveys</span><strong><span id="completed">0</span> <small>/ 10</small></strong><span class="stat-note">10 required for cash-out</span></div>
-        <div><span class="stat-label">Withdrawal</span><button id="withdraw" class="withdraw" type="button" disabled>Complete 10 surveys</button><span class="stat-note">Reward tracking &amp; payouts pending</span></div>
+        <div><span class="stat-label">Confirmed balance</span><strong><span id="balance">--</span> <small>Robux</small></strong><span class="stat-note">Verified by Offerwall.GG</span></div>
+        <div><span class="stat-label">Completed surveys</span><strong><span id="completed">--</span> <small>/ 10</small></strong><span class="stat-note">10 required for cash-out</span></div>
+        <div><span class="stat-label">Withdrawal</span><button id="withdraw" class="withdraw" type="button" disabled>Checking progress</button><span class="stat-note">Payout connection pending</span></div>
       </div>
+      <div class="reward-sync"><p id="rewardStatus" role="status">Checking confirmed rewards...</p><button class="text-link" id="refreshRewards" type="button">Refresh rewards</button></div>
     </section>
     <section id="how" class="section" aria-labelledby="howTitle">
       <div class="section-heading"><span class="kicker">THREE SIMPLE STEPS</span><h2 id="howTitle">Your next quest, explained.</h2></div>
@@ -69,7 +71,7 @@
     </section>
     <section id="fair" class="fair"><svg class="fair-icon" aria-hidden="true"><use href="#icon-game"/></svg><div class="kicker">NEXT ON THE MAP</div><h2>An item hub for your world.</h2><p>A place to showcase your favorite items. Currently in the works.</p><span class="pill">Coming later</span></section>
   </main>
-  <footer class="foot"><div class="wrap"><a class="brand footer-brand" href="#"><img src="assets/lootlane-mark.svg" width="30" height="30" alt=""><span class="brand-name">Lootlane <span>Rewards</span></span></a><p>An independent fan project. Not affiliated with Roblox.</p><p>Offers have provider eligibility requirements. Reward crediting and withdrawals are not yet connected.</p></div></footer>
+  <footer class="foot"><div class="wrap"><a class="brand footer-brand" href="#"><img src="assets/lootlane-mark.svg" width="30" height="30" alt=""><span class="brand-name">Lootlane <span>Rewards</span></span></a><p>An independent fan project. Not affiliated with Roblox.</p><p>Offers have provider eligibility requirements. Rewards appear after confirmation. Withdrawals are not yet connected.</p></div></footer>
   <aside class="support" aria-label="Support">
     <section id="supportPanel" class="support-panel" hidden aria-labelledby="supportTitle">
       <div class="support-head"><h2 id="supportTitle">A little help?</h2><button type="button" class="icon-button" id="closeSupport" aria-label="Close support"><svg class="icon" aria-hidden="true"><use href="#icon-close"/></svg></button></div>

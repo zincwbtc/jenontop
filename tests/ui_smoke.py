@@ -5,6 +5,7 @@ import json
 from pathlib import Path
 import threading
 import time
+from urllib.parse import urlparse, parse_qs
 from playwright.sync_api import sync_playwright, expect
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -52,6 +53,15 @@ try:
             wall_requests.append(route.request.url)
             route.fulfill(content_type="text/html", body="<body style='background:#102329;color:#d6eee6'><h1>Provider fixture</h1><div style='height:1600px'>Scrollable offers</div></body>")
         page.route("https://offerwall.gg/**", mock_wall)
+        reward_state = {"balance":53,"completedSurveys":1}
+        def mock_rewards(route):
+            user = parse_qs(urlparse(route.request.url).query)["userId"][0]
+            reward = reward_state if user == "Player_Test123" else {"balance":0,"completedSurveys":0}
+            route.fulfill(content_type="application/json", body=json.dumps({
+                "userId":user,**reward,"requiredSurveys":10,"payoutsEnabled":False,
+                "syncDelayed":False,"lastSyncedAt":"2026-09-23T10:00:00Z"
+            }))
+        page.route("**/api/rewards?*", mock_rewards)
         page.goto(base)
         expect(page.locator("#profileButton")).to_have_text("Log in")
         assert len(wall_requests) == 0, "Wall should not load above the fold"
@@ -88,6 +98,14 @@ try:
         page.locator("#loginUsername").press("Enter")
         expect(page.locator("#loginDialog")).not_to_be_visible()
         expect(page.locator("#dashboardUsername")).to_have_text("Player_Test123")
+        expect(page.locator("#balance")).to_have_text("53")
+        expect(page.locator("#completed")).to_have_text("1")
+        # Browser-edited counters must never overwrite verified rewards.
+        page.evaluate("localStorage.setItem('lootlane-balance','999999');localStorage.setItem('lootlane-completed-surveys','99')")
+        reward_state.update(balance=106, completedSurveys=2)
+        page.locator("#refreshRewards").click()
+        expect(page.locator("#balance")).to_have_text("106")
+        expect(page.locator("#completed")).to_have_text("2")
         assert "userId=Player_Test123" in page.locator("#offerwallOpen").get_attribute("href")
 
         # Support tests never send a real Discord message.
@@ -143,6 +161,7 @@ try:
         blocked.add_init_script("Object.defineProperty(window, 'localStorage', {get(){throw new DOMException('Blocked','SecurityError')}})")
         blocked_page = blocked.new_page()
         blocked_page.route("https://offerwall.gg/**", mock_wall)
+        blocked_page.route("**/api/rewards?*", mock_rewards)
         blocked_page.goto(base)
         blocked_page.locator("#profileButton").click()
         blocked_page.locator("#loginUsername").fill("Private_Player")

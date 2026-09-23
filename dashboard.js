@@ -2,6 +2,7 @@
   'use strict';
   const publicKey = 'c6e9d79d42b4ff5990ee1e9dbc1d7039';
   const supportUrl = 'https://lootlane-test-backend.brycen0407.workers.dev/api/shop';
+  const rewardsUrl = 'https://lootlane-test-backend.brycen0407.workers.dev/api/rewards';
   const memory = new Map();
   // Storage can be unavailable in private or embedded browsers. The UI must still work.
   const storage = {
@@ -23,13 +24,59 @@
     const value = raw === null ? fallback : Number(raw);
     return Number.isFinite(value) && value >= 0 ? value : fallback;
   };
-  const format = value => value.toLocaleString('en-US', { maximumFractionDigits: 2 });
-  const completed = Math.floor(readNumber('lootlane-completed-surveys'));
+  const format = value => value.toLocaleString('en-US', { maximumFractionDigits: 4 });
   $('payoutPool').textContent = format(readNumber('lootlane-payout-pool', 423567));
-  $('balance').textContent = format(readNumber('lootlane-balance'));
-  $('completed').textContent = format(completed);
-  // A local counter is not proof of a reward or an actual payout request.
-  $('withdraw').textContent = completed < 10 ? 'Complete ' + (10 - completed) + ' surveys' : 'Payout setup pending';
+  let rewardTimer;
+  let rewardRequest;
+  let rewardGeneration = 0;
+  function resetRewards() {
+    rewardGeneration++;
+    rewardRequest?.abort();
+    clearTimeout(rewardTimer);
+    $('balance').textContent = '--';
+    $('completed').textContent = '--';
+    $('withdraw').textContent = 'Checking progress';
+    $('rewardStatus').textContent = 'Checking confirmed rewards...';
+    void refreshRewards();
+  }
+  async function refreshRewards() {
+    clearTimeout(rewardTimer);
+    if (document.hidden || rewardRequest) return;
+    const generation = rewardGeneration;
+    const user = username || guestId;
+    const controller = new AbortController();
+    rewardRequest = controller;
+    $('refreshRewards').disabled = true;
+    const timeout = setTimeout(() => controller.abort(), 20000);
+    try {
+      const response = await fetch(rewardsUrl + '?userId=' + encodeURIComponent(user), {
+        cache: 'no-store', signal: controller.signal
+      });
+      const reward = await response.json();
+      if (!response.ok) throw new Error(reward.error || 'Unable to refresh rewards.');
+      if (generation !== rewardGeneration) return;
+      if (reward.userId !== user || !Number.isFinite(reward.balance) || !Number.isInteger(reward.completedSurveys)) throw new Error('Invalid reward response.');
+      $('balance').textContent = format(reward.balance);
+      $('completed').textContent = format(reward.completedSurveys);
+      $('withdraw').textContent = reward.completedSurveys < 10 ? 'Complete ' + (10 - reward.completedSurveys) + ' more' : 'Payout setup pending';
+      $('rewardStatus').textContent = reward.syncDelayed
+        ? 'Showing confirmed rewards. Provider updates are delayed; retrying automatically.'
+        : 'Synced with Offerwall.GG. New completions appear after provider confirmation.';
+    } catch (error) {
+      if (generation === rewardGeneration) $('rewardStatus').textContent = 'Could not refresh rewards. Your confirmed balance is saved; please retry.';
+    } finally {
+      clearTimeout(timeout);
+      if (rewardRequest === controller) rewardRequest = null;
+      $('refreshRewards').disabled = false;
+      if (!document.hidden) rewardTimer = setTimeout(refreshRewards, generation === rewardGeneration ? 15000 : 0);
+    }
+  }
+  $('refreshRewards').addEventListener('click', () => void refreshRewards());
+  document.addEventListener('visibilitychange', () => {
+    clearTimeout(rewardTimer);
+    if (!document.hidden) void refreshRewards();
+  });
+  window.addEventListener('focus', () => { if (!document.hidden) void refreshRewards(); });
 
   const frame = $('offerwallFrame');
   const placeholder = $('wallPlaceholder');
@@ -46,6 +93,9 @@
     $('dashboardUsername').textContent = username || 'Not logged in';
     $('profileNote').textContent = username ? 'Your profile is saved on this browser.' : 'Save your username to personalize this browser.';
     $('offerwallOpen').href = wallUrl();
+    $('earningIdentity').textContent = username
+      ? 'Rewards are credited to ' + username + '.'
+      : 'Guest rewards stay with this browser. Log in before starting to earn under your Roblox username.';
   }
   function loadWall() {
     if (wallStarted) return;
@@ -56,7 +106,7 @@
     clearTimeout(wallTimer);
     wallTimer = setTimeout(() => {
       // Never replace or unload an in-progress offer on a timer.
-      document.querySelector('.wall-footnote').textContent = 'If the offers have not appeared, open them in a new tab using the link above.';
+      $('wallLoadNote').textContent = 'If the offers have not appeared, open them in a new tab using the link above.';
     }, 15000);
   }
   frame.addEventListener('load', () => { clearTimeout(wallTimer); });
@@ -73,6 +123,7 @@
     loadWall();
   }
   updateProfile();
+  resetRewards();
 
   const dialog = $('loginDialog');
   let loginTrigger;
@@ -108,6 +159,7 @@
     username = nextUsername;
     const saved = storage.set('lootlane-username', username);
     updateProfile();
+    if (changed) resetRewards();
     if (!saved) $('profileNote').textContent = 'Your profile is available for this visit. Browser storage is disabled.';
     if (changed && wallStarted) {
       // Only an explicit identity change reloads the wall.

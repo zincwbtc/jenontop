@@ -1,0 +1,45 @@
+# Offerwall reward integration
+
+The live frontend reads `GET /api/rewards?userId=...` from the Worker. Balances and completed surveys come from D1, never localStorage. The browser refreshes every 15 seconds while visible and after a profile change or a return to the tab.
+
+## Provider settings
+
+In the Offerwall.GG placement, set the postback URL to:
+
+```text
+https://lootlane-test-backend.brycen0407.workers.dev/api/offerwall/postback
+```
+
+Use GET with no macros (the provider appends all fields), or POST with form-encoded fields. The handler verifies HMAC-SHA256, checks the authenticated conversion record, and acknowledges only after D1 records it. The placement secret is stored as the Worker secret `OFFERWALL_SECRET`; never put it in frontend code or Git.
+
+The scheduled job runs every minute and reconciles conversion history, so missed callbacks can be recovered even before the placement callback is configured. A shared database lease bounds polling across visitors and cron. Each pass checks the latest page and resumes older pages, including reversed records.
+
+## Accounting behavior
+
+- Transaction IDs are unique. Retries cannot credit twice.
+- Amounts retain four decimal places as integer units; the provider's confirmed amount is authoritative.
+- Reversals remove the corresponding credit and survey count. Reordered credits never undo reversals.
+- Test callbacks and pending/rejected conversions do not credit.
+- Authenticated provider records named `Survey ...` with no intermediate goal count as completed surveys. Games and partial goals can award balance but do not satisfy the ten-survey requirement.
+- Usernames are matched case-insensitively. Old guest rewards remain attached to the exact guest ID; they are not automatically moved to an unverified username.
+- The username flow is a profile lookup, not proof of Roblox account ownership. No withdrawal authorization is added by this integration. Robux delivery remains a separate, unconnected system.
+- Provider errors preserve confirmed balances and are surfaced as delayed sync, never as zeroing or success.
+
+## Deploy and check
+
+```sh
+npx --no-install wrangler d1 migrations apply lootlane-test --remote
+npx --no-install wrangler secret put OFFERWALL_SECRET
+npx --no-install wrangler deploy
+```
+
+From the repo root:
+
+```sh
+node --test tests/rewards.test.mjs
+python tests/ui_smoke.py
+```
+
+The tests use local secrets and mocked provider records, not real rewards or Discord messages.
+
+References: [Postbacks](https://offerwall.gg/developers/postbacks), [API specification](https://offerwall.gg/openapi.json).
