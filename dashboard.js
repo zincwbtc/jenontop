@@ -1,0 +1,7 @@
+(() => {
+  const user = localStorage.getItem('lootlane-username');
+  const completed = Number(localStorage.getItem('lootlane-completed-surveys') || 0);
+  const balance = Number(localStorage.getItem('lootlane-balance') || 0);
+  window.openLogin = () => { const name = prompt('Enter your Roblox username. Never enter your Roblox password.'); if (name && /^[A-Za-z0-9_]{3,20}$/.test(name.trim())) { localStorage.setItem('lootlane-username', name.trim()); location.reload(); } };
+  window.addEventListener('DOMContentLoaded', () => { const profile=document.querySelector('.profile'); if(profile){profile.textContent=user||'Log in';profile.onclick=window.openLogin} const main=document.querySelector('main'); if(!main)return; const section=document.createElement('section'); section.id='dashboard'; section.className='section dashboard'; section.innerHTML=`<div class="kicker">PLAYER DASHBOARD</div><h2>Your rewards at a glance.</h2><div class="dashboard-grid"><div><small>Roblox username</small><strong>${user||'Not logged in'}</strong></div><div><small>Completed surveys</small><strong>${completed} / 10</strong></div><div><small>Robux balance</small><strong>${balance} Robux</strong></div><div><small>Withdrawal status</small><button class="withdraw" disabled>${completed<10?`Complete ${10-completed} more`:'Withdraw Robux'}</button></div></div>`; main.insertBefore(section,main.querySelector('#how')); });
+})();
