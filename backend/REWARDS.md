@@ -18,6 +18,8 @@ The scheduled job runs every minute and reconciles conversion history, so missed
 
 - Transaction IDs are unique. Retries cannot credit twice.
 - Amounts retain four decimal places as integer units; the provider's confirmed amount is authoritative.
+- Owner-authorized corrections live separately in `reward_corrections`, keyed by the source transaction. A correction records the promised total and an audit reason; the added amount is only the positive difference from the provider credit. It cannot credit a second completion, duplicate on retry, or overwrite the provider's amount.
+- The balance response separates `providerBalance` and `storeCorrection`. Corrections are funded by the store; they are not additional revenue from Offerwall.GG. They become inactive if the source conversion reverses. There is no public endpoint to create corrections.
 - Reversals remove the corresponding credit and survey count. Reordered credits never undo reversals.
 - Test callbacks and pending/rejected conversions do not credit.
 - Authenticated provider records named `Survey ...` with no intermediate goal count as completed surveys. Games and partial goals can award balance but do not satisfy the ten-survey requirement.

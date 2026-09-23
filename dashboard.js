@@ -37,6 +37,7 @@
     $('completed').textContent = '--';
     $('withdraw').textContent = 'Checking progress';
     $('rewardStatus').textContent = 'Checking confirmed rewards...';
+    $('rewardBreakdown').textContent = '';
     void refreshRewards();
   }
   async function refreshRewards() {
@@ -58,6 +59,9 @@
       if (reward.userId !== user || !Number.isFinite(reward.balance) || !Number.isInteger(reward.completedSurveys)) throw new Error('Invalid reward response.');
       $('balance').textContent = format(reward.balance);
       $('completed').textContent = format(reward.completedSurveys);
+      $('rewardBreakdown').textContent = reward.storeCorrection > 0
+        ? format(reward.providerBalance) + ' Robux from Offerwall.GG + ' + format(reward.storeCorrection) + ' Robux store correction.'
+        : '';
       $('withdraw').textContent = reward.completedSurveys < 10 ? 'Complete ' + (10 - reward.completedSurveys) + ' more' : 'Payout setup pending';
       $('rewardStatus').textContent = reward.syncDelayed
         ? 'Showing confirmed rewards. Provider updates are delayed; retrying automatically.'
@@ -93,6 +97,9 @@
     $('dashboardUsername').textContent = username || 'Not logged in';
     $('profileNote').textContent = username ? 'Your profile is saved on this browser.' : 'Save your username to personalize this browser.';
     $('offerwallOpen').href = wallUrl();
+    const supportLink = new URL('https://offerwall.gg/wall/' + publicKey + '/support');
+    supportLink.searchParams.set('userId', username || guestId);
+    $('rewardHelp').href = supportLink.href;
     $('earningIdentity').textContent = username
       ? 'Rewards are credited to ' + username + '.'
       : 'Guest rewards stay with this browser. Log in before starting to earn under your Roblox username.';

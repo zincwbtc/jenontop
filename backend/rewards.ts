@@ -92,15 +92,23 @@ export async function reconcileRewards(env: Env) {
 }
 export async function rewardSummary(env: Env, user: string) {
   const row = await env.DB.prepare(`
-    SELECT COALESCE(SUM(CASE WHEN status='credited' THEN amount_units ELSE 0 END),0) AS units,
-      COALESCE(SUM(CASE WHEN status='credited' THEN completed_survey ELSE 0 END),0) AS completed,
-      MAX(updated_at) AS updated
-    FROM reward_conversions WHERE user_key=?
+    SELECT
+      COALESCE(SUM(CASE WHEN c.status='credited' THEN c.amount_units ELSE 0 END),0) AS provider_units,
+      COALESCE(SUM(CASE WHEN c.status='credited'
+        THEN MAX(0,COALESCE(a.promised_units,0)-c.amount_units) ELSE 0 END),0) AS correction_units,
+      COALESCE(SUM(CASE WHEN c.status='credited' THEN c.completed_survey ELSE 0 END),0) AS completed,
+      MAX(MAX(c.updated_at,COALESCE(a.created_at,c.updated_at))) AS updated
+    FROM reward_conversions c LEFT JOIN reward_corrections a ON a.transaction_id=c.transaction_id
+    WHERE c.user_key=?
   `).bind(user.toLowerCase()).first();
   const sync = await env.DB.prepare('SELECT last_success,last_error FROM reward_sync WHERE id=1').first();
+  const providerUnits = Number(row?.provider_units || 0);
+  const correctionUnits = Number(row?.correction_units || 0);
+  const totalUnits = providerUnits + correctionUnits;
   return {
-    userId: user, balance: Number(row?.units || 0) / SCALE, completedSurveys: Number(row?.completed || 0),
-    requiredSurveys: 10, eligible: Number(row?.completed || 0) >= 10 && Number(row?.units || 0) > 0,
+    userId: user, balance: totalUnits / SCALE, providerBalance: providerUnits / SCALE,
+    storeCorrection: correctionUnits / SCALE, completedSurveys: Number(row?.completed || 0),
+    requiredSurveys: 10, eligible: Number(row?.completed || 0) >= 10 && totalUnits > 0,
     payoutsEnabled: false, updatedAt: row?.updated || null, lastSyncedAt: sync?.last_success || null,
     syncDelayed: !!sync?.last_error
   };

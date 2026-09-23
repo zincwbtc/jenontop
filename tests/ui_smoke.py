@@ -53,10 +53,10 @@ try:
             wall_requests.append(route.request.url)
             route.fulfill(content_type="text/html", body="<body style='background:#102329;color:#d6eee6'><h1>Provider fixture</h1><div style='height:1600px'>Scrollable offers</div></body>")
         page.route("https://offerwall.gg/**", mock_wall)
-        reward_state = {"balance":53,"completedSurveys":1}
+        reward_state = {"balance":53,"completedSurveys":1,"providerBalance":3.5,"storeCorrection":49.5}
         def mock_rewards(route):
             user = parse_qs(urlparse(route.request.url).query)["userId"][0]
-            reward = reward_state if user == "Player_Test123" else {"balance":0,"completedSurveys":0}
+            reward = reward_state if user == "Player_Test123" else {"balance":0,"completedSurveys":0,"providerBalance":0,"storeCorrection":0}
             route.fulfill(content_type="application/json", body=json.dumps({
                 "userId":user,**reward,"requiredSurveys":10,"payoutsEnabled":False,
                 "syncDelayed":False,"lastSyncedAt":"2026-09-23T10:00:00Z"
@@ -100,9 +100,11 @@ try:
         expect(page.locator("#dashboardUsername")).to_have_text("Player_Test123")
         expect(page.locator("#balance")).to_have_text("53")
         expect(page.locator("#completed")).to_have_text("1")
+        expect(page.locator("#rewardBreakdown")).to_contain_text("49.5 Robux store correction")
+        assert "userId=Player_Test123" in page.locator("#rewardHelp").get_attribute("href")
         # Browser-edited counters must never overwrite verified rewards.
         page.evaluate("localStorage.setItem('lootlane-balance','999999');localStorage.setItem('lootlane-completed-surveys','99')")
-        reward_state.update(balance=106, completedSurveys=2)
+        reward_state.update(balance=106, completedSurveys=2, providerBalance=56.5)
         page.locator("#refreshRewards").click()
         expect(page.locator("#balance")).to_have_text("106")
         expect(page.locator("#completed")).to_have_text("2")

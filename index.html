@@ -7,8 +7,8 @@
   <meta name="description" content="Explore offers, find your next challenge, and keep your Lootlane rewards in one place.">
   <title>Lootlane Rewards</title>
   <link rel="icon" href="assets/lootlane-mark.svg" type="image/svg+xml">
-  <link rel="stylesheet" href="support.css?v=20260923c">
-  <script src="dashboard.js?v=20260923c" defer></script>
+  <link rel="stylesheet" href="support.css?v=20260923d">
+  <script src="dashboard.js?v=20260923d" defer></script>
 </head>
 <body>
   <svg class="icon-library" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
@@ -59,11 +59,11 @@
       <div class="section-heading"><span class="kicker">YOUR PLAYER SPACE</span><h2 id="dashboardTitle">Everything in one place.</h2><p id="profileNote">Save your username to personalize this browser.</p></div>
       <div class="dashboard-grid">
         <div><span class="stat-label">Player</span><strong id="dashboardUsername">Not logged in</strong><button class="text-link" type="button" data-login>Set username</button></div>
-        <div><span class="stat-label">Confirmed balance</span><strong><span id="balance">--</span> <small>Robux</small></strong><span class="stat-note">Verified by Offerwall.GG</span></div>
+        <div><span class="stat-label">Confirmed balance</span><strong><span id="balance">--</span> <small>Robux</small></strong><span class="stat-note">Provider rewards + store corrections</span></div>
         <div><span class="stat-label">Completed surveys</span><strong><span id="completed">--</span> <small>/ 10</small></strong><span class="stat-note">10 required for cash-out</span></div>
         <div><span class="stat-label">Withdrawal</span><button id="withdraw" class="withdraw" type="button" disabled>Checking progress</button><span class="stat-note">Payout connection pending</span></div>
       </div>
-      <div class="reward-sync"><p id="rewardStatus" role="status">Checking confirmed rewards...</p><button class="text-link" id="refreshRewards" type="button">Refresh rewards</button></div>
+      <div class="reward-sync"><p id="rewardStatus" role="status">Checking confirmed rewards...</p><p id="rewardBreakdown"></p><div class="reward-links"><button class="text-link" id="refreshRewards" type="button">Refresh rewards</button><a class="text-link" id="rewardHelp" target="_blank" rel="noopener noreferrer">Report an incorrect reward</a></div></div>
     </section>
     <section id="how" class="section" aria-labelledby="howTitle">
       <div class="section-heading"><span class="kicker">THREE SIMPLE STEPS</span><h2 id="howTitle">Your next quest, explained.</h2></div>

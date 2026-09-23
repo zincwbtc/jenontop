@@ -9,6 +9,7 @@ const secret = 'local-unit-test-secret-not-a-provider-key';
 function environment() {
   const db = new DatabaseSync(':memory:');
   db.exec(readFileSync(new URL('../backend/migrations/0005_offerwall_rewards.sql', import.meta.url), 'utf8'));
+  db.exec(readFileSync(new URL('../backend/migrations/0006_reward_corrections.sql', import.meta.url), 'utf8'));
   const DB = {
     prepare(sql) {
       let values = [];
@@ -122,4 +123,31 @@ test('the ten survey threshold uses confirmed survey completions',async()=>{
   const result=await rewardSummary(env,'Player_One');
   assert.equal(result.completedSurveys,10); assert.equal(result.balance,530);
   assert.equal(result.eligible,true); assert.equal(result.payoutsEnabled,false);
+});
+test('an authorized 53 Robux correction adds only the 49.5 shortfall and survives provider resync',async()=>{
+  const env=environment();
+  const conversion=row({currencyAmount:3.5});
+  await storeConversion(env,conversion);
+  const insert=env.sqlite.prepare("INSERT INTO reward_corrections(transaction_id,promised_units,reason) VALUES(?,?,?) ON CONFLICT(transaction_id) DO NOTHING");
+  insert.run(conversion.transactionId,530000,'Owner-authorized reward correction');
+  insert.run(conversion.transactionId,530000,'Duplicate correction attempt');
+  for(let i=0;i<3;i++) await storeConversion(env,conversion);
+  const result=await rewardSummary(env,'Player_One');
+  assert.equal(result.balance,53);
+  assert.equal(result.providerBalance,3.5);
+  assert.equal(result.storeCorrection,49.5);
+  assert.equal(result.completedSurveys,1);
+  assert.equal((await rewardSummary(env,'Other_Player')).balance,0);
+  assert.equal(env.sqlite.prepare('SELECT amount_units FROM reward_conversions').get().amount_units,35000);
+});
+test('a correction never reduces a higher provider reward and reverses with its source survey',async()=>{
+  const env=environment();
+  await storeConversion(env,row({currencyAmount:60}));
+  env.sqlite.prepare("INSERT INTO reward_corrections(transaction_id,promised_units,reason) VALUES(?,?,?)")
+    .run('tx-53',530000,'Honor quoted reward');
+  assert.equal((await rewardSummary(env,'Player_One')).balance,60);
+  assert.equal((await rewardSummary(env,'Player_One')).storeCorrection,0);
+  await storeConversion(env,row({currencyAmount:-60,status:'reversed'}));
+  const result=await rewardSummary(env,'Player_One');
+  assert.equal(result.balance,0); assert.equal(result.storeCorrection,0); assert.equal(result.completedSurveys,0);
 });
