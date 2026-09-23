@@ -2,7 +2,7 @@
   const user = localStorage.getItem('lootlane-username');
   const completed = Number(localStorage.getItem('lootlane-completed-surveys') || 0);
   const balance = Number(localStorage.getItem('lootlane-balance') || 0);
-  const payoutPool = Number(localStorage.getItem('lootlane-payout-pool') || 423567);\n  localStorage.setItem('lootlane-payout-pool', String(payoutPool));
+  const payoutPool = Number(localStorage.getItem('lootlane-payout-pool') || 423567);`n  localStorage.setItem('lootlane-payout-pool', String(payoutPool));
   window.openLogin = () => {
     let dialog=document.getElementById('loginOverlay');
     if(!dialog){dialog=document.createElement('div');dialog.id='loginOverlay';dialog.className='login-overlay';dialog.innerHTML='<div class="login-card"><button class="login-close" aria-label="Close">×</button><div class="kicker">PLAYER LOGIN</div><h2>Enter username here</h2><p>Use your Roblox username to continue. Never enter your Roblox password.</p><label for="loginUsername">Enter your Roblox username here</label><input id="loginUsername" maxlength="20" autocomplete="off" placeholder="Enter your Roblox username here"><small class="login-error"></small><button class="primary login-submit">Login</button></div>';document.body.appendChild(dialog);dialog.querySelector('.login-close').onclick=()=>dialog.remove();dialog.addEventListener('click',e=>{if(e.target===dialog)dialog.remove()});dialog.querySelector('.login-submit').onclick=()=>{const input=dialog.querySelector('#loginUsername'),name=input.value.trim(),error=dialog.querySelector('.login-error');if(!/^[A-Za-z0-9_]{3,20}$/.test(name)){error.textContent='Enter a valid Roblox username.';return}localStorage.setItem('lootlane-username',name);location.reload()};}
