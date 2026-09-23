@@ -1,1 +1,0 @@
-document.addEventListener('DOMContentLoaded',()=>{const activity=document.getElementById('activity');if(!activity)return;new MutationObserver(()=>{const label=activity.querySelector('strong');if(label)label.textContent='Activity'}).observe(activity,{childList:true,subtree:true})});

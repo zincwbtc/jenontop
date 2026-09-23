@@ -1,0 +1,27 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 760 260" fill="none">
+<defs>
+<linearGradient id="coin" x2="1" y2="1"><stop stop-color="#c5ffe6"/><stop offset="1" stop-color="#4bccab"/></linearGradient>
+<linearGradient id="shirt" x2="1" y2="1"><stop stop-color="#b4a4fb"/><stop offset="1" stop-color="#7263ba"/></linearGradient>
+<linearGradient id="island" x2="0" y2="1"><stop stop-color="#20564f"/><stop offset="1" stop-color="#102d2d"/></linearGradient>
+</defs>
+<ellipse cx="380" cy="235" rx="270" ry="14" fill="#051114" opacity=".5"/>
+<path d="m170 176 211-50 213 50-213 59Z" fill="url(#island)" stroke="#32796a"/>
+<path d="M170 176v17l211 59v-17Zm211 59 213-59v17l-213 59" fill="#0d2629" stroke="#23564e"/>
+<path d="m263 153 213 58m-154-73 214 56m-239 17 209-59m-145 76 214-60" stroke="#356b5c" opacity=".45"/>
+<path d="m340 159 33 5-2 62-33-4Zm40 5 34-5 6 62-34 5Z" fill="#294f62" stroke="#527b88" stroke-width="2"/>
+<path d="m336 213 36 4 1 13-43-4Zm48 4 37-4 7 13-45 5Z" fill="#c1e8da"/>
+<path d="m332 91 46-12 47 12-9 79-37 11-39-11Z" fill="url(#shirt)" stroke="#c3b7fb" stroke-width="2"/>
+<path d="m332 91-24 9-12 60 23 5 20-44m86-30 24 9 13 60-24 5-19-44" fill="#8978ca" stroke="#b9a9ef" stroke-width="2"/>
+<path d="m296 150 25 5-4 22-27-6Zm141 5 25-5 6 21-27 6Z" fill="#ffdba3"/>
+<path d="m370 110 25 7-7 25-25-7Z" fill="#e0ffe6"/><path d="m375 120 9 3-3 9-9-3Z" fill="#8071bc"/>
+<rect x="345" y="27" width="65" height="59" rx="16" fill="#ffdda8" stroke="#ffecca" stroke-width="2"/>
+<path d="M344 44V32c0-13 13-21 32-21s34 9 34 22v7l-21-2-11-9-11 12Z" fill="#2c494b" stroke="#507271" stroke-width="2"/>
+<rect x="360" y="50" width="5" height="9" rx="2.5" fill="#1d3f40"/><rect x="391" y="50" width="5" height="9" rx="2.5" fill="#1d3f40"/><path d="M368 66q10 11 20 0" stroke="#784c35" stroke-width="3" stroke-linecap="round"/>
+<g transform="translate(173 84) rotate(-17)"><path d="m0-39 28 11 11 28-11 28-28 11-28-11-11-28 11-28Z" fill="#277760" transform="translate(7 9)"/><path d="m0-39 28 11 11 28-11 28-28 11-28-11-11-28 11-28Z" fill="url(#coin)" stroke="#d0ffea" stroke-width="2"/><path d="m-12-16 30 8-8 30-30-8Z" fill="#246b57"/><path d="m-6-6 12 3-3 12-12-3Z" fill="#aaffd6"/></g>
+<g transform="translate(575 100) rotate(15) scale(1.2)"><path d="m0-34 24 10 10 24-10 24-24 10-24-10-10-24 10-24Z" fill="#277760" transform="translate(5 7)"/><path d="m0-34 24 10 10 24-10 24-24 10-24-10-10-24 10-24Z" fill="url(#coin)" stroke="#d0ffea" stroke-width="2"/><path d="m-10-14 26 7-7 26-26-7Z" fill="#246b57"/><path d="m-5-5 10 3-3 10-10-3Z" fill="#aaffd6"/></g>
+<g transform="translate(260 41) rotate(16) scale(.5)"><path d="m0-34 24 10 10 24-10 24-24 10-24-10-10-24 10-24Z" fill="url(#coin)"/><path d="m-10-14 26 7-7 26-26-7Z" fill="#246b57"/></g>
+<path d="m99 148 19-5 15 10-18 6Z" fill="#b9a8ef"/><path d="m99 148 16 11v17l-16-11Zm16 11 18-6v17l-18 6Z" fill="#7766aa"/>
+<path d="m631 187 24-6 19 13-23 7Z" fill="#81dbbb"/><path d="m631 187 20 14v18l-20-14Zm20 14 23-7v18l-23 7Z" fill="#347c67"/>
+<path d="m477 45 4 12 12 4-12 4-4 12-4-12-12-4 12-4Zm-240 76 3 9 9 3-9 3-3 9-3-9-9-3 9-3Zm-154-78 3 8 8 3-8 3-3 8-3-8-8-3 8-3Z" fill="#e9cd87"/>
+<circle cx="670" cy="70" r="4" fill="#84c6bc"/><circle cx="501" cy="142" r="3" fill="#c4b6f6"/>
+</svg>
