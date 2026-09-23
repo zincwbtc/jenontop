@@ -1,8 +1,8 @@
 {
   "name": "lootlane-test-backend",
   "main": "worker.ts",
-  "compatibility_date": "2026-09-22",
+  "compatibility_date": "2026-09-10",
   "compatibility_flags": ["nodejs_compat"],
-  "vars": { "ALLOWED_ORIGIN": "https://YOUR-USERNAME.github.io" },
-  "d1_databases": [{ "binding": "DB", "database_name": "lootlane-test", "database_id": "REPLACE-WITH-YOUR-DATABASE-ID", "migrations_dir": "migrations" }]
+  "vars": { "ALLOWED_ORIGIN": "https://zincwbtc.github.io" },
+  "d1_databases": [{ "binding": "DB", "database_name": "lootlane-test", "database_id": "d578c9a3-d046-436d-85b1-bcee05bda169", "migrations_dir": "migrations" }]
 }
