@@ -10,6 +10,21 @@
     set(key, value) { memory.set(key, String(value)); try { localStorage.setItem(key, String(value)); return true; } catch { return false; } }
   };
   const $ = id => document.getElementById(id);
+  // Highlight the nav pill for whichever section is currently in view.
+  const navLinks = [...document.querySelectorAll('.nav-links a[href^="#"]')];
+  if ('IntersectionObserver' in window) {
+    const visible = new Map();
+    const observer = new IntersectionObserver(entries => {
+      entries.forEach(entry => visible.set(entry.target.id, entry.intersectionRatio));
+      let best = '', bestRatio = 0;
+      visible.forEach((ratio, id) => { if (ratio > bestRatio) { best = id; bestRatio = ratio; } });
+      navLinks.forEach(link => {
+        if (bestRatio > 0 && link.getAttribute('href') === '#' + best) link.setAttribute('aria-current', 'true');
+        else link.removeAttribute('aria-current');
+      });
+    }, { threshold: [0, .15, .3, .5, .75, 1] });
+    navLinks.forEach(link => { const section = document.querySelector(link.getAttribute('href')); if (section) observer.observe(section); });
+  }
   const validUsername = value => /^[A-Za-z0-9_]{3,20}$/.test(value || '');
   let username = storage.get('lootlane-username');
   if (!validUsername(username)) username = '';
