@@ -2,14 +2,17 @@ import { createHmac, timingSafeEqual } from 'node:crypto';
 
 const PUBLIC_KEY = 'c6e9d79d42b4ff5990ee1e9dbc1d7039';
 const SCALE = 10000;
-type Env = { DB: any; OFFERWALL_SECRET?: string };
+type Env = { DB: any; OFFERWALL_SECRET?: string; PAYOUT_WEBHOOK_URL?: string; TEST_ACCESS_KEY?: string };
+const REQUIRED_SURVEYS = 10;
 type Conversion = {
   transactionId: string; userId: string; currencyAmount: number | string;
   status: string; offerName?: string; goalId?: string; createdAt?: string; test?: string | number | boolean;
 };
 export function validUser(value: string) {
-  return /^[A-Za-z0-9_]{3,20}$/.test(value) || /^guest-[a-zA-Z0-9-]{8,60}$/.test(value);
+  return validUsername(value) || /^guest-[a-zA-Z0-9-]{8,60}$/.test(value);
 }
+// Only Roblox usernames can withdraw; guest IDs have no account to pay.
+export function validUsername(value: string) { return /^[A-Za-z0-9_]{3,20}$/.test(value); }
 // Integer units preserve all four provider decimal places.
 export function amountUnits(value: unknown): number {
   const text = String(value);
@@ -101,15 +104,29 @@ export async function rewardSummary(env: Env, user: string) {
     FROM reward_conversions c LEFT JOIN reward_corrections a ON a.transaction_id=c.transaction_id
     WHERE c.user_key=?
   `).bind(user.toLowerCase()).first();
+  const spent = await env.DB.prepare(`
+    SELECT COALESCE(SUM(amount_units),0) AS units, COALESCE(SUM(surveys_used),0) AS surveys,
+      COALESCE(SUM(CASE WHEN status='pending' THEN amount_units ELSE 0 END),0) AS pending_units
+    FROM reward_withdrawals WHERE user_key=? AND status IN ('pending','paid')
+  `).bind(user.toLowerCase()).first();
   const sync = await env.DB.prepare('SELECT last_success,last_error FROM reward_sync WHERE id=1').first();
   const providerUnits = Number(row?.provider_units || 0);
   const correctionUnits = Number(row?.correction_units || 0);
   const totalUnits = providerUnits + correctionUnits;
+  const spentUnits = Number(spent?.units || 0), pendingUnits = Number(spent?.pending_units || 0);
+  // A reversal after a payout can push the remainder below zero; never show a negative balance.
+  const availableUnits = Math.max(0, totalUnits - spentUnits);
+  const totalSurveys = Number(row?.completed || 0);
+  const progress = Math.max(0, totalSurveys - Number(spent?.surveys || 0));
+  const payoutsEnabled = !!env.PAYOUT_WEBHOOK_URL;
   return {
-    userId: user, balance: totalUnits / SCALE, providerBalance: providerUnits / SCALE,
-    storeCorrection: correctionUnits / SCALE, completedSurveys: Number(row?.completed || 0),
-    requiredSurveys: 10, eligible: Number(row?.completed || 0) >= 10 && totalUnits > 0,
-    payoutsEnabled: false, updatedAt: row?.updated || null, lastSyncedAt: sync?.last_success || null,
+    userId: user, balance: availableUnits / SCALE, earnedBalance: totalUnits / SCALE,
+    providerBalance: providerUnits / SCALE, storeCorrection: correctionUnits / SCALE,
+    withdrawnBalance: (spentUnits - pendingUnits) / SCALE, pendingWithdrawal: pendingUnits / SCALE,
+    completedSurveys: progress, totalCompletedSurveys: totalSurveys, requiredSurveys: REQUIRED_SURVEYS,
+    withdrawableBalance: Math.floor(availableUnits / SCALE),
+    eligible: payoutsEnabled && validUsername(user) && progress >= REQUIRED_SURVEYS && availableUnits >= SCALE,
+    payoutsEnabled, updatedAt: row?.updated || null, lastSyncedAt: sync?.last_success || null,
     syncDelayed: !!sync?.last_error
   };
 }
@@ -151,4 +168,97 @@ export async function handlePostback(request: Request, env: Env) {
     await storeConversion(env, conversion);
     return new Response('OK');
   } catch { return new Response('RETRY', { status: 503 }); }
+}
+
+function payoutWebhook(env: Env) {
+  const url = new URL(env.PAYOUT_WEBHOOK_URL || '');
+  if (url.protocol !== 'https:' || !['discord.com', 'discordapp.com'].includes(url.hostname) || !url.pathname.startsWith('/api/webhooks/')) throw new Error('Invalid payout webhook');
+  return url;
+}
+type Withdrawal = { id: string; user_id: string; amount_units: number; surveys_used: number; created_at: string };
+// Posts to #payout-log. A failed post leaves notified=0 so the cron job retries it.
+export async function notifyWithdrawal(env: Env, w: Withdrawal) {
+  const amount = (w.amount_units / SCALE).toLocaleString('en-US');
+  const response = await fetch(payoutWebhook(env), {
+    method: 'POST', headers: { 'Content-Type': 'application/json' }, redirect: 'error', signal: AbortSignal.timeout(8000),
+    body: JSON.stringify({
+      username: 'Lootlane Payouts', allowed_mentions: { parse: [] },
+      embeds: [{
+        title: 'New withdrawal request', color: 0x91edc8,
+        description: 'Pay **' + amount + ' Robux** to Roblox user **' + w.user_id + '**.\nUsernames are not verified, so confirm the account before paying.',
+        fields: [
+          { name: 'Roblox username', value: '[' + w.user_id + '](https://www.roblox.com/search/users?keyword=' + encodeURIComponent(w.user_id) + ')', inline: true },
+          { name: 'Amount', value: amount + ' Robux', inline: true },
+          { name: 'Surveys used', value: String(w.surveys_used), inline: true },
+          { name: 'Request ID', value: '`' + w.id + '`' }
+        ],
+        footer: { text: 'Lootlane withdrawals' }, timestamp: w.created_at
+      }]
+    })
+  });
+  await response.body?.cancel();
+  if (!response.ok) throw new Error('Payout log unavailable (' + response.status + ')');
+  await env.DB.prepare('UPDATE reward_withdrawals SET notified=1 WHERE id=?').bind(w.id).run();
+}
+export async function notifyPendingWithdrawals(env: Env) {
+  if (!env.PAYOUT_WEBHOOK_URL) return;
+  for (let i = 0; i < 10; i++) {
+    const w = await env.DB.prepare('SELECT id,user_id,amount_units,surveys_used,created_at FROM reward_withdrawals WHERE notified=0 ORDER BY created_at LIMIT 1').first();
+    if (!w) return;
+    await notifyWithdrawal(env, w);
+  }
+}
+function isAdmin(request: Request, env: Env) {
+  const key = env.TEST_ACCESS_KEY || '';
+  const given = Buffer.from(request.headers.get('Authorization') || '');
+  const expected = Buffer.from('Bearer ' + key);
+  return key.length >= 32 && given.length === expected.length && timingSafeEqual(given, expected);
+}
+export async function handleWithdraw(request: Request, env: Env) {
+  let body: any;
+  try { body = JSON.parse(await request.text()); } catch { return Response.json({ error: 'Invalid request.' }, { status: 400 }); }
+  // Staff close a request once the Robux is sent (paid) or refused (rejected gives the balance back).
+  if (body?.action === 'resolve') {
+    if (!isAdmin(request, env)) return Response.json({ error: 'Not authorized.' }, { status: 403 });
+    if (!['paid', 'rejected'].includes(body.status) || typeof body.id !== 'string') return Response.json({ error: 'Give an id and a status of paid or rejected.' }, { status: 400 });
+    const done = await env.DB.prepare("UPDATE reward_withdrawals SET status=?,updated_at=? WHERE id=? AND status='pending' RETURNING id,user_id,status")
+      .bind(body.status, new Date().toISOString(), body.id).first();
+    return done ? Response.json({ ok: true, withdrawal: done }) : Response.json({ error: 'No pending withdrawal with that id.' }, { status: 404 });
+  }
+  const user = String(body?.userId || '');
+  if (!validUsername(user)) return Response.json({ error: 'Log in with your Roblox username to withdraw.' }, { status: 400 });
+  if (!env.PAYOUT_WEBHOOK_URL) return Response.json({ error: 'Withdrawals are temporarily unavailable.' }, { status: 503 });
+  try { await reconcileRewards(env); } catch { /* Withdraw against confirmed credits only. */ }
+  const now = new Date().toISOString(), key = user.toLowerCase();
+  // One statement checks eligibility and records the request, so concurrent clicks cannot withdraw twice.
+  const created = await env.DB.prepare(`
+    WITH earned AS (
+      SELECT COALESCE(SUM(c.amount_units + MAX(0,COALESCE(a.promised_units,0)-c.amount_units)),0) AS units,
+        COALESCE(SUM(c.completed_survey),0) AS surveys
+      FROM reward_conversions c LEFT JOIN reward_corrections a ON a.transaction_id=c.transaction_id
+      WHERE c.user_key=? AND c.status='credited'
+    ), spent AS (
+      SELECT COALESCE(SUM(amount_units),0) AS units, COALESCE(SUM(surveys_used),0) AS surveys
+      FROM reward_withdrawals WHERE user_key=? AND status IN ('pending','paid')
+    )
+    INSERT INTO reward_withdrawals(id,user_id,user_key,amount_units,surveys_used,status,notified,created_at,updated_at)
+    SELECT ?,?,?,((earned.units-spent.units)/${SCALE})*${SCALE},earned.surveys-spent.surveys,'pending',0,?,?
+    FROM earned, spent
+    WHERE earned.surveys-spent.surveys>=${REQUIRED_SURVEYS} AND earned.units-spent.units>=${SCALE}
+    RETURNING id,user_id,amount_units,surveys_used,created_at
+  `).bind(key, key, crypto.randomUUID(), user, key, now, now).first();
+  if (!created) {
+    const summary = await rewardSummary(env, user);
+    const error = summary.completedSurveys < REQUIRED_SURVEYS
+      ? 'Complete ' + (REQUIRED_SURVEYS - summary.completedSurveys) + ' more surveys to withdraw.'
+      : 'You need at least 1 Robux available to withdraw.';
+    return Response.json({ error, summary }, { status: 409 });
+  }
+  let notified = true;
+  try { await notifyWithdrawal(env, created); } catch { notified = false; }
+  return Response.json({
+    ok: true, notified,
+    withdrawal: { id: created.id, amount: created.amount_units / SCALE, surveysUsed: created.surveys_used, status: 'pending', createdAt: created.created_at },
+    summary: await rewardSummary(env, user)
+  });
 }

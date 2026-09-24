@@ -93,7 +93,9 @@ h3{font-size:21px;line-height:1.3;letter-spacing:-.5px;margin:15px 0 8px}
 .stat-note{font-size:10px;color:#acc3c3}
 .reward-sync{text-align:center;margin-top:20px}.reward-sync p{color:var(--muted);font-size:12px;margin:0 0 8px}.text-link:disabled{opacity:.6}
 .reward-links{display:flex;flex-wrap:wrap;justify-content:center;gap:12px 24px}.reward-sync #rewardBreakdown{color:var(--mint)}
-.withdraw{border:1px solid #3a4c4f;color:#b0bdc0;background:#273b3f;min-height:40px;border-radius:8px;font-size:12px;padding:7px 12px;max-width:100%}
+.withdraw{border:1px solid #3a4c4f;color:#b0bdc0;background:#273b3f;min-height:40px;border-radius:8px;font-size:12px;padding:7px 12px;max-width:100%;transition:background-color .16s ease,transform .16s ease,box-shadow .16s ease}
+.withdraw:enabled{cursor:pointer;background:var(--mint);border-color:var(--mint);color:#0c3026;font-weight:800;box-shadow:0 8px 20px -8px #91edc8aa}
+.withdraw:enabled:hover{background:#b7ffdc;transform:translateY(-1px)}
 .how article{text-align:center;padding:10px 24px}
 .step-number{display:grid;place-items:center;width:42px;height:42px;margin:auto;background:#19382f;border:1px solid #305647;border-radius:50%;color:var(--mint);font-weight:750;font-size:12px}
 .how p{font-size:13px;color:var(--muted)}

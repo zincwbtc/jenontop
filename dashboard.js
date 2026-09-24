@@ -3,6 +3,7 @@
   const publicKey = 'c6e9d79d42b4ff5990ee1e9dbc1d7039';
   const supportUrl = 'https://lootlane-test-backend.brycen0407.workers.dev/api/shop';
   const rewardsUrl = 'https://lootlane-test-backend.brycen0407.workers.dev/api/rewards';
+  const withdrawUrl = 'https://lootlane-test-backend.brycen0407.workers.dev/api/withdraw';
   const memory = new Map();
   // Storage can be unavailable in private or embedded browsers. The UI must still work.
   const storage = {
@@ -51,10 +52,54 @@
     $('balance').textContent = '--';
     $('completed').textContent = '--';
     $('withdraw').textContent = 'Checking progress';
+    $('withdraw').disabled = true;
     $('rewardStatus').textContent = 'Checking confirmed rewards...';
     $('rewardBreakdown').textContent = '';
     void refreshRewards();
   }
+  function showReward(reward) {
+    $('balance').textContent = format(reward.balance);
+    $('completed').textContent = format(reward.completedSurveys);
+    const notes = [];
+    if (reward.storeCorrection > 0) notes.push(format(reward.providerBalance) + ' Robux from Offerwall.GG + ' + format(reward.storeCorrection) + ' Robux store correction.');
+    if (reward.pendingWithdrawal > 0) notes.push(format(reward.pendingWithdrawal) + ' Robux withdrawal is on its way.');
+    if (reward.withdrawnBalance > 0) notes.push(format(reward.withdrawnBalance) + ' Robux paid out so far.');
+    $('rewardBreakdown').textContent = notes.join(' ');
+    const button = $('withdraw'), required = reward.requiredSurveys || 10;
+    button.disabled = !reward.eligible;
+    if (reward.eligible) button.textContent = 'Withdraw ' + format(reward.withdrawableBalance) + ' Robux';
+    else if (!username) button.textContent = 'Log in to withdraw';
+    else if (reward.completedSurveys < required) button.textContent = 'Complete ' + (required - reward.completedSurveys) + ' more';
+    else if (!reward.payoutsEnabled) button.textContent = 'Withdrawals paused';
+    else button.textContent = 'Earn 1 Robux to withdraw';
+    $('withdrawNote').textContent = reward.pendingWithdrawal > 0 ? 'Request sent to our payout team' : 'Paid to your Roblox account';
+  }
+  $('withdraw').addEventListener('click', async () => {
+    const button = $('withdraw');
+    if (button.disabled || !username) return;
+    const generation = rewardGeneration;
+    button.disabled = true;
+    button.textContent = 'Sending request...';
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 20000);
+    try {
+      const response = await fetch(withdrawUrl, {
+        method: 'POST', headers: { 'Content-Type': 'application/json' }, signal: controller.signal,
+        body: JSON.stringify({ userId: username })
+      });
+      const result = await response.json();
+      if (generation !== rewardGeneration) return;
+      if (result.summary) showReward(result.summary);
+      if (!response.ok) throw new Error(result.error || 'Could not request a withdrawal. Please try again.');
+      $('rewardStatus').textContent = 'Withdrawal requested: ' + format(result.withdrawal.amount) + ' Robux to ' + username + '. Our team will send it soon.';
+    } catch (error) {
+      if (generation !== rewardGeneration) return;
+      $('rewardStatus').textContent = error.name === 'AbortError' ? 'The request timed out. Refresh rewards before trying again.' : error.message;
+      void refreshRewards();
+    } finally {
+      clearTimeout(timeout);
+    }
+  });
   async function refreshRewards() {
     clearTimeout(rewardTimer);
     if (document.hidden || rewardRequest) return;
@@ -72,12 +117,7 @@
       if (!response.ok) throw new Error(reward.error || 'Unable to refresh rewards.');
       if (generation !== rewardGeneration) return;
       if (reward.userId !== user || !Number.isFinite(reward.balance) || !Number.isInteger(reward.completedSurveys)) throw new Error('Invalid reward response.');
-      $('balance').textContent = format(reward.balance);
-      $('completed').textContent = format(reward.completedSurveys);
-      $('rewardBreakdown').textContent = reward.storeCorrection > 0
-        ? format(reward.providerBalance) + ' Robux from Offerwall.GG + ' + format(reward.storeCorrection) + ' Robux store correction.'
-        : '';
-      $('withdraw').textContent = reward.completedSurveys < 10 ? 'Complete ' + (10 - reward.completedSurveys) + ' more' : 'Payout setup pending';
+      showReward(reward);
       $('rewardStatus').textContent = reward.syncDelayed
         ? 'Showing confirmed rewards. Provider updates are delayed; retrying automatically.'
         : 'Synced with Offerwall.GG. New completions appear after provider confirmation.';

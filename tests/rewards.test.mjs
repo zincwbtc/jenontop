@@ -3,13 +3,16 @@ import assert from 'node:assert/strict';
 import { DatabaseSync } from 'node:sqlite';
 import { readFileSync } from 'node:fs';
 import { createHmac } from 'node:crypto';
-import { amountUnits, handlePostback, handleRewards, reconcileRewards, rewardSummary, storeConversion } from '../backend/rewards.ts';
+import { amountUnits, handlePostback, handleRewards, handleWithdraw, notifyPendingWithdrawals, reconcileRewards, rewardSummary, storeConversion } from '../backend/rewards.ts';
 
 const secret = 'local-unit-test-secret-not-a-provider-key';
+const webhook = 'https://discord.com/api/webhooks/1/test-token';
+const adminKey = 'a'.repeat(40);
 function environment() {
   const db = new DatabaseSync(':memory:');
   db.exec(readFileSync(new URL('../backend/migrations/0005_offerwall_rewards.sql', import.meta.url), 'utf8'));
   db.exec(readFileSync(new URL('../backend/migrations/0006_reward_corrections.sql', import.meta.url), 'utf8'));
+  db.exec(readFileSync(new URL('../backend/migrations/0007_reward_withdrawals.sql', import.meta.url), 'utf8'));
   const DB = {
     prepare(sql) {
       let values = [];
@@ -116,13 +119,13 @@ test('provider outages retry callbacks and keep confirmed balances',async t=>{
   assert.equal((await rewardSummary(env,'Player_One')).balance,53);
 });
 test('the ten survey threshold uses confirmed survey completions',async()=>{
-  const env=environment();
+  const env={...environment(),PAYOUT_WEBHOOK_URL:webhook};
   for(let i=0;i<9;i++) await storeConversion(env,row({transactionId:'survey-'+i}));
   assert.equal((await rewardSummary(env,'Player_One')).eligible,false);
   await storeConversion(env,row({transactionId:'survey-9'}));
   const result=await rewardSummary(env,'Player_One');
   assert.equal(result.completedSurveys,10); assert.equal(result.balance,530);
-  assert.equal(result.eligible,true); assert.equal(result.payoutsEnabled,false);
+  assert.equal(result.eligible,true); assert.equal(result.payoutsEnabled,true);
 });
 test('an authorized 53 Robux correction adds only the 49.5 shortfall and survives provider resync',async()=>{
   const env=environment();
@@ -150,4 +153,95 @@ test('a correction never reduces a higher provider reward and reverses with its 
   await storeConversion(env,row({currencyAmount:-60,status:'reversed'}));
   const result=await rewardSummary(env,'Player_One');
   assert.equal(result.balance,0); assert.equal(result.storeCorrection,0); assert.equal(result.completedSurveys,0);
+});
+
+// Withdrawals: the provider has no new rows; the Discord webhook is captured instead of sent.
+function payoutEnv(t, {failPosts = 0} = {}) {
+  const env = {...environment(), PAYOUT_WEBHOOK_URL: webhook, TEST_ACCESS_KEY: adminKey};
+  const posts = [];
+  t.mock.method(globalThis, 'fetch', async (url, options) => {
+    if (new URL(url).origin === 'https://offerwall.gg') return Response.json({success:true,data:{conversions:[],pagination:{total:0}}});
+    assert.equal(String(url), webhook);
+    if (failPosts-- > 0) return new Response('down', {status: 500});
+    posts.push(JSON.parse(options.body));
+    return new Response(null, {status: 204});
+  });
+  return {env, posts};
+}
+const withdraw = (env, body, headers = {}) => handleWithdraw(new Request('https://worker.test/api/withdraw', {
+  method: 'POST', headers: {'Content-Type': 'application/json', ...headers}, body: JSON.stringify(body)
+}), env);
+async function surveys(env, count, amount = 53, prefix = 's') {
+  for (let i = 0; i < count; i++) await storeConversion(env, row({transactionId: prefix + '-' + i, currencyAmount: amount}));
+}
+test('ten completed surveys unlock a withdrawal that posts once to the payout log and resets progress', async t => {
+  const {env, posts} = payoutEnv(t);
+  await surveys(env, 9);
+  let response = await withdraw(env, {userId: 'Player_One'});
+  assert.equal(response.status, 409);
+  assert.match((await response.json()).error, /1 more survey/);
+  assert.equal(posts.length, 0);
+  await surveys(env, 1, 53, 'last');
+  assert.equal((await rewardSummary(env, 'Player_One')).eligible, true);
+  response = await withdraw(env, {userId: 'player_one'});
+  assert.equal(response.status, 200);
+  const result = await response.json();
+  assert.equal(result.withdrawal.amount, 530); assert.equal(result.withdrawal.surveysUsed, 10); assert.equal(result.notified, true);
+  assert.equal(result.summary.balance, 0); assert.equal(result.summary.completedSurveys, 0);
+  assert.equal(result.summary.pendingWithdrawal, 530); assert.equal(result.summary.eligible, false);
+  assert.equal(posts.length, 1);
+  assert.match(posts[0].embeds[0].description, /530 Robux\*\* to Roblox user \*\*player_one/);
+  assert.deepEqual(posts[0].allowed_mentions, {parse: []});
+  // Nothing left to withdraw until ten more surveys.
+  assert.equal((await withdraw(env, {userId: 'Player_One'})).status, 409);
+  await surveys(env, 10, 53, 'next');
+  assert.equal((await withdraw(env, {userId: 'Player_One'})).status, 200);
+  assert.equal(posts.length, 2);
+});
+test('concurrent withdraw clicks create exactly one request', async t => {
+  const {env, posts} = payoutEnv(t);
+  await surveys(env, 10);
+  const responses = await Promise.all(Array.from({length: 8}, () => withdraw(env, {userId: 'Player_One'})));
+  assert.equal(responses.filter(r => r.status === 200).length, 1);
+  assert.equal(env.sqlite.prepare('SELECT COUNT(*) AS n FROM reward_withdrawals').get().n, 1);
+  assert.equal(posts.length, 1);
+});
+test('guests and disabled payouts cannot withdraw', async t => {
+  const {env} = payoutEnv(t);
+  await storeConversion(env, row({userId: 'guest-abcdef123456'}));
+  assert.equal((await withdraw(env, {userId: 'guest-abcdef123456'})).status, 400);
+  assert.equal((await withdraw({...env, PAYOUT_WEBHOOK_URL: ''}, {userId: 'Player_One'})).status, 503);
+  assert.equal((await rewardSummary({...env, PAYOUT_WEBHOOK_URL: ''}, 'Player_One')).payoutsEnabled, false);
+});
+test('only whole Robux are withdrawn; the fraction stays in the balance', async t => {
+  const {env} = payoutEnv(t);
+  await surveys(env, 10, 5.25);
+  const result = await (await withdraw(env, {userId: 'Player_One'})).json();
+  assert.equal(result.withdrawal.amount, 52); assert.equal(result.summary.balance, 0.5);
+});
+test('a failed payout-log post keeps the request and the scheduled job retries it', async t => {
+  const {env, posts} = payoutEnv(t, {failPosts: 1});
+  await surveys(env, 10);
+  const result = await (await withdraw(env, {userId: 'Player_One'})).json();
+  assert.equal(result.notified, false); assert.equal(result.summary.balance, 0);
+  await notifyPendingWithdrawals(env);
+  await notifyPendingWithdrawals(env);
+  assert.equal(posts.length, 1);
+  assert.equal(env.sqlite.prepare('SELECT notified FROM reward_withdrawals').get().notified, 1);
+});
+test('staff can mark paid or rejected; rejection returns balance and surveys', async t => {
+  const {env} = payoutEnv(t);
+  await surveys(env, 10);
+  const first = (await (await withdraw(env, {userId: 'Player_One'})).json()).withdrawal;
+  assert.equal((await withdraw(env, {action: 'resolve', id: first.id, status: 'rejected'})).status, 403);
+  assert.equal((await withdraw(env, {action: 'resolve', id: first.id, status: 'rejected'}, {Authorization: 'Bearer wrong'})).status, 403);
+  const auth = {Authorization: 'Bearer ' + adminKey};
+  assert.equal((await withdraw(env, {action: 'resolve', id: first.id, status: 'rejected'}, auth)).status, 200);
+  let summary = await rewardSummary(env, 'Player_One');
+  assert.equal(summary.balance, 530); assert.equal(summary.completedSurveys, 10);
+  assert.equal((await withdraw(env, {action: 'resolve', id: first.id, status: 'paid'}, auth)).status, 404);
+  const second = (await (await withdraw(env, {userId: 'Player_One'})).json()).withdrawal;
+  assert.equal((await withdraw(env, {action: 'resolve', id: second.id, status: 'paid'}, auth)).status, 200);
+  summary = await rewardSummary(env, 'Player_One');
+  assert.equal(summary.balance, 0); assert.equal(summary.withdrawnBalance, 530); assert.equal(summary.pendingWithdrawal, 0);
 });

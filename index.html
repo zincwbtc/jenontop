@@ -7,8 +7,8 @@
   <meta name="description" content="Explore offers, find your next challenge, and keep your Lootlane rewards in one place.">
   <title>Lootlane Rewards</title>
   <link rel="icon" href="assets/lootlane-mark.svg" type="image/svg+xml">
-  <link rel="stylesheet" href="support.css?v=20260924a">
-  <script src="dashboard.js?v=20260924a" defer></script>
+  <link rel="stylesheet" href="support.css?v=20260924b">
+  <script src="dashboard.js?v=20260924b" defer></script>
 </head>
 <body>
   <svg class="icon-library" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
@@ -38,7 +38,7 @@
       <p class="lead">Discover offers, share your opinions, and find your next reward.<br class="desktop-break"> Your own little corner of the Roblox universe.</p>
       <div class="actions"><a class="primary" href="#offerwall">Explore rewards <svg class="icon" aria-hidden="true"><use href="#icon-arrow"/></svg></a><a class="secondary" href="#how">How it works</a></div>
       <img class="hero-art" src="assets/reward-world.svg" width="760" height="260" fetchpriority="high" alt="A block-style explorer surrounded by mint reward coins, stars, and floating game platforms">
-      <div class="pool-card"><svg class="coin-icon" aria-hidden="true"><use href="#icon-coin"/></svg><div><span class="muted">Configured payout pool</span><strong><span id="payoutPool">423,567</span> <small>Robux</small></strong></div><span class="pool-note">Payout setup pending</span></div>
+      <div class="pool-card"><svg class="coin-icon" aria-hidden="true"><use href="#icon-coin"/></svg><div><span class="muted">Configured payout pool</span><strong><span id="payoutPool">423,567</span> <small>Robux</small></strong></div><span class="pool-note">Withdraw after 10 surveys</span></div>
     </section>
     <section id="surveys" class="section" aria-labelledby="surveysTitle">
       <div class="section-heading"><span class="kicker">FIND YOUR FLOW</span><h2 id="surveysTitle">Small quests. New possibilities.</h2><p>A taste of what's next. Browse available partner offers below.</p></div>
@@ -61,9 +61,9 @@
       <div class="section-heading"><span class="kicker">YOUR PLAYER SPACE</span><h2 id="dashboardTitle">Everything in one place.</h2><p id="profileNote">Save your username to personalize this browser.</p></div>
       <div class="dashboard-grid">
         <div><span class="stat-label">Player</span><strong id="dashboardUsername">Not logged in</strong><button class="text-link" type="button" data-login>Set username</button></div>
-        <div><span class="stat-label">Confirmed balance</span><strong><span id="balance">--</span> <small>Robux</small></strong><span class="stat-note">Provider rewards + store corrections</span></div>
-        <div><span class="stat-label">Completed surveys</span><strong><span id="completed">--</span> <small>/ 10</small></strong><span class="stat-note">10 required for cash-out</span></div>
-        <div><span class="stat-label">Withdrawal</span><button id="withdraw" class="withdraw" type="button" disabled>Checking progress</button><span class="stat-note">Payout connection pending</span></div>
+        <div><span class="stat-label">Confirmed balance</span><strong><span id="balance">--</span> <small>Robux</small></strong><span class="stat-note">Available to withdraw</span></div>
+        <div><span class="stat-label">Completed surveys</span><strong><span id="completed">--</span> <small>/ 10</small></strong><span class="stat-note">10 required to withdraw</span></div>
+        <div><span class="stat-label">Withdrawal</span><button id="withdraw" class="withdraw" type="button" disabled>Checking progress</button><span class="stat-note" id="withdrawNote">Paid to your Roblox account</span></div>
       </div>
       <div class="reward-sync"><p id="rewardStatus" role="status">Checking confirmed rewards...</p><p id="rewardBreakdown"></p><div class="reward-links"><button class="text-link" id="refreshRewards" type="button">Refresh rewards</button><a class="text-link" id="rewardHelp" target="_blank" rel="noopener noreferrer">Report an incorrect reward</a></div></div>
     </section>
@@ -73,7 +73,7 @@
     </section>
     <section id="fair" class="fair"><svg class="fair-icon" aria-hidden="true"><use href="#icon-game"/></svg><div class="kicker">NEXT ON THE MAP</div><h2>An item hub for your world.</h2><p>A place to showcase your favorite items. Currently in the works.</p><span class="pill">Coming later</span></section>
   </main>
-  <footer class="foot"><div class="wrap"><a class="brand footer-brand" href="#"><img src="assets/lootlane-mark.svg" width="30" height="30" alt=""><span class="brand-name">Lootlane <span>Rewards</span></span></a><p>An independent fan project. Not affiliated with Roblox.</p><p>Offers have provider eligibility requirements. Rewards appear after confirmation. Withdrawals are not yet connected.</p></div></footer>
+  <footer class="foot"><div class="wrap"><a class="brand footer-brand" href="#"><img src="assets/lootlane-mark.svg" width="30" height="30" alt=""><span class="brand-name">Lootlane <span>Rewards</span></span></a><p>An independent fan project. Not affiliated with Roblox.</p><p>Offers have provider eligibility requirements. Rewards appear after confirmation. Withdrawals unlock after 10 completed surveys and are paid to your Roblox account by our team.</p></div></footer>
   <aside class="support" aria-label="Support">
     <section id="supportPanel" class="support-panel" hidden aria-labelledby="supportTitle">
       <div class="support-head"><h2 id="supportTitle">A little help?</h2><button type="button" class="icon-button" id="closeSupport" aria-label="Close support"><svg class="icon" aria-hidden="true"><use href="#icon-close"/></svg></button></div>

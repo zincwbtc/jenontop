@@ -1,5 +1,5 @@
 import { GET, POST } from './shop';
-import { handlePostback, handleRewards, reconcileRewards } from './rewards';
+import { handlePostback, handleRewards, handleWithdraw, notifyPendingWithdrawals, reconcileRewards } from './rewards';
 
 export default {
   async fetch(request: Request, env: any) {
@@ -23,6 +23,7 @@ export default {
     try {
       let response: Response;
       if (url.pathname === '/api/rewards' && request.method === 'GET') response = await handleRewards(request, env);
+      else if (url.pathname === '/api/withdraw' && request.method === 'POST') response = await handleWithdraw(request, env);
       else if (url.pathname === '/api/shop') {
         response = request.method === 'GET' ? await GET(request) : request.method === 'POST' ? await POST(request) : new Response('Method not allowed', { status: 405 });
       } else response = new Response('Not found', { status: 404 });
@@ -32,6 +33,6 @@ export default {
     } catch { return Response.json({ error: 'Rewards temporarily unavailable. Please retry.' }, { status: 503, headers }); }
   },
   async scheduled(_controller: any, env: any, ctx: any) {
-    ctx.waitUntil(reconcileRewards(env));
+    ctx.waitUntil(Promise.allSettled([reconcileRewards(env), notifyPendingWithdrawals(env)]));
   }
 };

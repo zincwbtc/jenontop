@@ -24,7 +24,7 @@ The scheduled job runs every minute and reconciles conversion history, so missed
 - Test callbacks and pending/rejected conversions do not credit.
 - Authenticated provider records named `Survey ...` with no intermediate goal count as completed surveys. Games and partial goals can award balance but do not satisfy the ten-survey requirement.
 - Usernames are matched case-insensitively. Old guest rewards remain attached to the exact guest ID; they are not automatically moved to an unverified username.
-- The username flow is a profile lookup, not proof of Roblox account ownership. No withdrawal authorization is added by this integration. Robux delivery remains a separate, unconnected system.
+- The username flow is a profile lookup, not proof of Roblox account ownership. Withdrawals unlock at 10 completed surveys (counted since the last withdrawal) and at least 1 whole Robux available. `POST /api/withdraw` records the request and posts it to the Discord #payout-log webhook (`PAYOUT_WEBHOOK_URL` secret); staff pay the Robux manually and must confirm the Roblox account first, since usernames are not verified. Staff close a request with `POST /api/withdraw {"action":"resolve","id":"...","status":"paid"|"rejected"}` and `Authorization: Bearer <TEST_ACCESS_KEY>`; rejected requests return the balance and surveys.
 - Provider errors preserve confirmed balances and are surfaced as delayed sync, never as zeroing or success.
 
 ## Deploy and check

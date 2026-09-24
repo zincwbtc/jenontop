@@ -58,7 +58,8 @@ try:
             user = parse_qs(urlparse(route.request.url).query)["userId"][0]
             reward = reward_state if user == "Player_Test123" else {"balance":0,"completedSurveys":0,"providerBalance":0,"storeCorrection":0}
             route.fulfill(content_type="application/json", body=json.dumps({
-                "userId":user,**reward,"requiredSurveys":10,"payoutsEnabled":False,
+                "requiredSurveys":10,"payoutsEnabled":True,"eligible":False,"withdrawableBalance":0,
+                "pendingWithdrawal":0,"withdrawnBalance":0,"userId":user,**reward,
                 "syncDelayed":False,"lastSyncedAt":"2026-09-23T10:00:00Z"
             }))
         page.route("**/api/rewards?*", mock_rewards)
@@ -109,6 +110,32 @@ try:
         expect(page.locator("#balance")).to_have_text("106")
         expect(page.locator("#completed")).to_have_text("2")
         assert "userId=Player_Test123" in page.locator("#offerwallOpen").get_attribute("href")
+        expect(page.locator("#withdraw")).to_be_disabled()
+        expect(page.locator("#withdraw")).to_have_text("Complete 8 more")
+
+        # Ten surveys unlock withdrawing; the request is mocked so no Discord post is sent.
+        withdraw_requests = []
+        def mock_withdraw(route):
+            withdraw_requests.append(route.request.post_data_json)
+            reward_state.update(balance=0, completedSurveys=0, eligible=False, withdrawableBalance=0, pendingWithdrawal=106)
+            route.fulfill(content_type="application/json", body=json.dumps({
+                "ok":True,"withdrawal":{"id":"w-1","amount":106,"surveysUsed":10,"status":"pending"},
+                "summary":{"userId":"Player_Test123","requiredSurveys":10,"payoutsEnabled":True,"withdrawnBalance":0,**reward_state}}))
+        page.route("**/api/withdraw", mock_withdraw)
+        reward_state.update(completedSurveys=10, eligible=True, withdrawableBalance=106)
+        page.locator("#refreshRewards").click()
+        expect(page.locator("#withdraw")).to_be_enabled()
+        expect(page.locator("#withdraw")).to_have_text("Withdraw 106 Robux")
+        page.locator("#withdraw").click()
+        expect(page.locator("#rewardStatus")).to_contain_text("Withdrawal requested: 106 Robux to Player_Test123")
+        assert withdraw_requests == [{"userId":"Player_Test123"}], withdraw_requests
+        expect(page.locator("#withdraw")).to_be_disabled()
+        expect(page.locator("#balance")).to_have_text("0")
+        expect(page.locator("#rewardBreakdown")).to_contain_text("106 Robux withdrawal is on its way")
+        page.locator("#dashboard").screenshot(path=str(ARTIFACTS / "withdraw.png"))
+        reward_state.update(balance=106, completedSurveys=2, eligible=False, withdrawableBalance=0, pendingWithdrawal=0)
+        page.locator("#refreshRewards").click()
+        expect(page.locator("#balance")).to_have_text("106")
 
         # Support tests never send a real Discord message.
         page.route("**/api/shop", lambda route: route.fulfill(
