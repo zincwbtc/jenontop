@@ -2,6 +2,13 @@ import { amountUnits, validUser } from './rewards.ts';
 
 const PUBLIC_KEY = 'c6e9d79d42b4ff5990ee1e9dbc1d7039';
 const PAGE_SIZE = 12;
+// Owner's blocked categories (2026-09-24). Keep a local guard as well as the
+// placement filters: the provider can tag a multi-step offer only as "signup".
+const BLOCKED_CATEGORIES = new Set(['game', 'mobilegame', 'desktopgame', 'app', 'freetrial', 'shopping', 'deposit', 'creditcard', 'multireward']);
+function allowedOffer(offer: any) {
+  return offer.type === 'singlestep' && Array.isArray(offer.categories) &&
+    !offer.categories.some((category: unknown) => BLOCKED_CATEGORIES.has(String(category).toLowerCase()));
+}
 function isSurvey(offer: any) {
   const categories = Array.isArray(offer.categories) ? offer.categories.map(String) : [];
   return categories.length ? categories.some((category: string) => /^surveys?$/i.test(category)) : /^survey\b/i.test(offer.name || '');
@@ -35,7 +42,8 @@ export async function handleOffers(request: Request, env: { OFFERWALL_SECRET?: s
   const surveys = category === 'survey';
   url.search = new URLSearchParams({ appId: PUBLIC_KEY, userId: user,
     limit: surveys ? '200' : String(PAGE_SIZE), page: surveys ? '1' : String(page), sort: 'popular' }).toString();
-  if (surveys) { url.searchParams.set('category', 'survey'); url.searchParams.set('type', 'singlestep'); }
+  url.searchParams.set('type', 'singlestep');
+  if (surveys) url.searchParams.set('category', 'survey');
   // Target the visitor, not the datacenter making this server-side request.
   const country = (request as Request & { cf?: { country?: string } }).cf?.country;
   if (!country || !/^[A-Z]{2}$/.test(country) || ['XX', 'T1'].includes(country))
@@ -75,7 +83,7 @@ export async function handleOffers(request: Request, env: { OFFERWALL_SECRET?: s
       }
       offers = offers.filter(offer => isSurvey(offer) && offer.type === 'singlestep');
     }
-    let presented = [...new Map(offers.map(offer => [offer.id, presentOffer(offer, user)])).values()];
+    let presented = [...new Map(offers.filter(allowedOffer).map(offer => [offer.id, presentOffer(offer, user)])).values()];
     let hasMore = data.pages > page;
     if (surveys) {
       presented = presented.filter(offer => maxReward === 'any' ||

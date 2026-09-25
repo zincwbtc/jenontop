@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { handleOffers, presentOffer } from '../backend/offers.ts';
 import { allowedOrigin, requestOrigin } from '../backend/origins.ts';
 
-const offer = { id: 123, name: 'Game', reward: 143.125, rewardFormatted: '143 Robux', type: 'singlestep', categories: ['game'] };
+const offer = { id: 123, name: 'Sign-up', reward: 143.125, rewardFormatted: '143 Robux', type: 'singlestep', categories: ['signup'] };
 test('same-origin browser reads work on Cloudflare while cross-site requests still require an allowed Origin', () => {
   const url = 'https://lootlaneblox.com/api/rewards';
   assert.equal(requestOrigin(new Request(url, {headers:{'Sec-Fetch-Site':'same-origin'}})), 'https://lootlaneblox.com');
@@ -37,6 +37,7 @@ test('offers target the visitor, preserve the provider rate, and expose no secre
     assert.equal(url.searchParams.get('device'), 'ios');
     assert.equal(url.searchParams.get('page'), '2');
     assert.equal(url.searchParams.get('sort'), 'popular');
+    assert.equal(url.searchParams.get('type'), 'singlestep');
     assert.equal(url.searchParams.has('category'), false);
     assert.equal(options.headers['X-Api-Key'], 'test-secret');
     assert.equal(url.href.includes('test-secret'), false);
@@ -117,6 +118,21 @@ test('incomplete catalogues and mid-scan currency changes fail instead of hiding
   assert.equal((await handleOffers(surveyRequest(), {OFFERWALL_SECRET: 'test'})).status, 503);
   t.mock.method(globalThis, 'fetch', async input => catalogue([survey], 2, new URL(input).searchParams.get('page') === '1' ? 100 : 70));
   assert.equal((await handleOffers(surveyRequest(), {OFFERWALL_SECRET: 'test'})).status, 503);
+});
+test('all views enforce the owner blocklist even when upstream misclassifies multi-step offers as sign-ups', async t => {
+  const blocked = ['game', 'mobilegame', 'desktopgame', 'app', 'freetrial', 'shopping', 'deposit', 'creditcard', 'multireward'];
+  t.mock.method(globalThis, 'fetch', async input => {
+    assert.equal(new URL(input).searchParams.get('type'), 'singlestep');
+    return catalogue([
+      {...offer, id: 761, name: 'EarnX', type: 'multistep'},
+      ...blocked.map((category, i) => ({...survey, id: i + 1, categories: ['survey', category.toUpperCase()]})),
+      survey, {...offer, id: 777}
+    ]);
+  });
+  const all = await (await handleOffers(surveyRequest('&category=all'), {OFFERWALL_SECRET: 'test'})).json();
+  assert.deepEqual(all.offers.map(item => item.id), [123, 777]);
+  const surveys = await (await handleOffers(surveyRequest(), {OFFERWALL_SECRET: 'test'})).json();
+  assert.deepEqual(surveys.offers.map(item => item.id), [123]);
 });
 test('missing geolocation and incorrect currency fail closed instead of displaying wrong prices', async t => {
   const request = new Request('https://worker.test/api/offers?userId=Player_One');
