@@ -315,14 +315,18 @@
       const { verb, amount } = demoEvent();
       const toast = document.createElement('div');
       toast.className = 'demo-toast';
-      toast.innerHTML = '<span class="demo-badge">DEMO</span><div><strong></strong> <span class="demo-text"></span><small>Example activity, not a real user or payout</small></div>';
+      toast.innerHTML = '<img class="demo-avatar" alt="" width="36" height="36"><div><span class="demo-badge">DEMO</span> <strong></strong> <span class="demo-text"></span><small>Example activity, not a real user or payout</small></div>';
+      // Generated pixel-art avatar (CC0), never a real Roblox user's picture.
+      toast.querySelector('img').src = 'https://api.dicebear.com/9.x/pixel-art/png?size=72&seed=' + Math.random().toString(36).slice(2, 12);
       toast.querySelector('strong').textContent = fakeName();
       toast.querySelector('.demo-text').textContent = verb + ' ' + amount + ' Robux';
       demoFeed.append(toast);
       requestAnimationFrame(() => toast.classList.add('show'));
       if (!new URLSearchParams(location.search).has('demopreview')) setTimeout(() => { toast.classList.remove('show'); setTimeout(() => toast.remove(), 400); }, 6000);
     };
-    const schedule = () => setTimeout(() => { if (!document.hidden) showDemo(); schedule(); }, 60000 + Math.random() * 120000);
+    // Mostly every 1-2 minutes; about 1 in 6 times a longer ~4-6 minute gap.
+    const nextWait = () => (Math.random() < 1 / 6 ? 240000 + Math.random() * 120000 : 60000 + Math.random() * 60000);
+    const schedule = () => setTimeout(() => { if (!document.hidden) showDemo(); schedule(); }, nextWait());
     if (new URLSearchParams(location.search).has('demopreview')) { showDemo(); demoFeed.lastChild.classList.add('show'); return; } // design check only
     setTimeout(() => { showDemo(); schedule(); }, 15000 + Math.random() * 15000);
   }
