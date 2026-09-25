@@ -1,9 +1,16 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { handleOffers, presentOffer } from '../backend/offers.ts';
-import { allowedOrigin } from '../backend/origins.ts';
+import { allowedOrigin, requestOrigin } from '../backend/origins.ts';
 
 const offer = { id: 123, name: 'Game', reward: 143.125, rewardFormatted: '143 Robux', type: 'singlestep', categories: ['game'] };
+test('same-origin browser reads work on Cloudflare while cross-site requests still require an allowed Origin', () => {
+  const url = 'https://lootlaneblox.com/api/rewards';
+  assert.equal(requestOrigin(new Request(url, {headers:{'Sec-Fetch-Site':'same-origin'}})), 'https://lootlaneblox.com');
+  assert.equal(requestOrigin(new Request(url, {headers:{'Sec-Fetch-Site':'cross-site'}})), '');
+  assert.equal(requestOrigin(new Request(url)), '');
+  assert.equal(requestOrigin(new Request(url, {headers:{Origin:'https://other.test','Sec-Fetch-Site':'same-origin'}})), 'https://other.test');
+});
 test('display uses the full provider amount without rounding or applying the exchange rate again', () => {
   const shown = presentOffer(offer, 'Player_One');
   assert.equal(shown.reward, 143.125);

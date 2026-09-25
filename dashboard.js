@@ -1,10 +1,12 @@
 (() => {
   'use strict';
   const publicKey = 'c6e9d79d42b4ff5990ee1e9dbc1d7039';
-  const supportUrl = 'https://lootlane-test-backend.brycen0407.workers.dev/api/shop';
-  const rewardsUrl = 'https://lootlane-test-backend.brycen0407.workers.dev/api/rewards';
-  const withdrawUrl = 'https://lootlane-test-backend.brycen0407.workers.dev/api/withdraw';
-  const offersUrl = 'https://lootlane-test-backend.brycen0407.workers.dev/api/offers';
+  const cloudflareOrigin = 'https://lootlane-test-backend.brycen0407.workers.dev';
+  const apiOrigin = ['lootlaneblox.com', 'www.lootlaneblox.com', 'lootlane-test-backend.brycen0407.workers.dev'].includes(location.hostname) ? location.origin : cloudflareOrigin;
+  const supportUrl = apiOrigin + '/api/shop';
+  const rewardsUrl = apiOrigin + '/api/rewards';
+  const withdrawUrl = apiOrigin + '/api/withdraw';
+  const offersUrl = apiOrigin + '/api/offers';
   const memory = new Map();
   // Storage can be unavailable in private or embedded browsers. The UI must still work.
   const storage = {

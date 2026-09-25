@@ -1,18 +1,19 @@
 import { GET, POST } from './shop';
 import { handlePostback, handleRewards, handleWithdraw, notifyPendingWithdrawals, reconcileRewards } from './rewards';
-import { allowedOrigin } from './origins';
+import { allowedOrigin, requestOrigin } from './origins';
 import { handleOffers } from './offers';
 
 export default {
   async fetch(request: Request, env: any) {
     const url = new URL(request.url);
+    if (!url.pathname.startsWith('/api/')) return env.ASSETS.fetch(request);
     // Provider callbacks have no browser Origin. Authenticate with HMAC instead.
     if (url.pathname === '/api/offerwall/postback') {
       const response = await handlePostback(request, env);
       response.headers.set('Cache-Control', 'no-store');
       return response;
     }
-    const origin = request.headers.get('Origin') || '';
+    const origin = requestOrigin(request);
     const allowed = allowedOrigin(origin, env.ALLOWED_ORIGIN);
     const headers = {
       'Access-Control-Allow-Origin': allowed ? origin : 'https://invalid.invalid',
