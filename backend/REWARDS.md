@@ -16,6 +16,10 @@ The scheduled job runs every minute and reconciles conversion history, so missed
 
 ## Accounting behavior
 
+- `GET /api/offers` reads live, already-converted `reward` amounts and `currency.perUsd` from the same Offerwall.GG placement. It does not multiply by the rate again or use rounded `rewardFormatted`. The secret stays in the Worker.
+- The catalog labels surveys as estimates, variable rewards as "Reward varies", and multi-step rewards as "Up to" totals. Each card links to the provider's requirements page with the same user ID, where the provider tracks the actual offer start. Advertiser confirmation may differ from an estimate; changing display labels does not increase historical credits.
+- Country comes from Cloudflare's visitor geolocation and device from the visitor's user agent. Missing geolocation or an unexpected provider currency fails closed rather than displaying datacenter-targeted or incorrectly labeled offers.
+
 - Transaction IDs are unique. Retries cannot credit twice.
 - Amounts retain four decimal places as integer units; the provider's confirmed amount is authoritative.
 - Owner-authorized corrections live separately in `reward_corrections`, keyed by the source transaction. A correction records the promised total and an audit reason; the added amount is only the positive difference from the provider credit. It cannot credit a second completion, duplicate on retry, or overwrite the provider's amount.
@@ -38,7 +42,7 @@ npx --no-install wrangler deploy
 From the repo root:
 
 ```sh
-node --test tests/rewards.test.mjs
+node --test tests/rewards.test.mjs tests/offers.test.mjs
 python tests/ui_smoke.py
 ```
 

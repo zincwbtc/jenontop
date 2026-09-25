@@ -1,5 +1,7 @@
 import { GET, POST } from './shop';
 import { handlePostback, handleRewards, handleWithdraw, notifyPendingWithdrawals, reconcileRewards } from './rewards';
+import { allowedOrigin } from './origins';
+import { handleOffers } from './offers';
 
 export default {
   async fetch(request: Request, env: any) {
@@ -11,18 +13,19 @@ export default {
       return response;
     }
     const origin = request.headers.get('Origin') || '';
-    const allowed = env.ALLOWED_ORIGIN;
+    const allowed = allowedOrigin(origin, env.ALLOWED_ORIGIN);
     const headers = {
-      'Access-Control-Allow-Origin': origin === allowed ? origin : 'https://invalid.invalid',
+      'Access-Control-Allow-Origin': allowed ? origin : 'https://invalid.invalid',
       'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
       'Access-Control-Allow-Headers': 'Content-Type, Authorization',
       'Vary': 'Origin', 'Cache-Control': 'no-store'
     };
-    if (!allowed || origin !== allowed) return Response.json({ error: 'Origin not allowed' }, { status: 403, headers });
+    if (!allowed) return Response.json({ error: 'Origin not allowed' }, { status: 403, headers });
     if (request.method === 'OPTIONS') return new Response(null, { status: 204, headers });
     try {
       let response: Response;
-      if (url.pathname === '/api/rewards' && request.method === 'GET') response = await handleRewards(request, env);
+      if (url.pathname === '/api/offers' && request.method === 'GET') response = await handleOffers(request, env);
+      else if (url.pathname === '/api/rewards' && request.method === 'GET') response = await handleRewards(request, env);
       else if (url.pathname === '/api/withdraw' && request.method === 'POST') response = await handleWithdraw(request, env);
       else if (url.pathname === '/api/shop') {
         response = request.method === 'GET' ? await GET(request) : request.method === 'POST' ? await POST(request) : new Response('Method not allowed', { status: 405 });

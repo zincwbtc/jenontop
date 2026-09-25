@@ -4,6 +4,7 @@
   const supportUrl = 'https://lootlane-test-backend.brycen0407.workers.dev/api/shop';
   const rewardsUrl = 'https://lootlane-test-backend.brycen0407.workers.dev/api/rewards';
   const withdrawUrl = 'https://lootlane-test-backend.brycen0407.workers.dev/api/withdraw';
+  const offersUrl = 'https://lootlane-test-backend.brycen0407.workers.dev/api/offers';
   const memory = new Map();
   // Storage can be unavailable in private or embedded browsers. The UI must still work.
   const storage = {
@@ -137,10 +138,10 @@
   });
   window.addEventListener('focus', () => { if (!document.hidden) void refreshRewards(); });
 
-  const frame = $('offerwallFrame');
-  const placeholder = $('wallPlaceholder');
   let wallStarted = false;
-  let wallTimer;
+  let offersRequest;
+  let offerPage = 1;
+  let offerSearch = '';
   function wallUrl() {
     const url = new URL('https://offerwall.gg/wall/' + publicKey);
     url.searchParams.set('userId', username || guestId);
@@ -159,25 +160,68 @@
       ? 'Rewards are credited to ' + username + '.'
       : 'Guest rewards stay with this browser. Log in before starting to earn under your Roblox username.';
   }
-  function loadWall() {
-    if (wallStarted) return;
+  async function loadWall() {
+    offersRequest?.abort();
+    const controller = new AbortController();
+    offersRequest = controller;
     wallStarted = true;
-    placeholder.hidden = true;
-    frame.hidden = false;
-    frame.src = wallUrl();
-    clearTimeout(wallTimer);
-    wallTimer = setTimeout(() => {
-      // Never replace or unload an in-progress offer on a timer.
-      $('wallLoadNote').textContent = 'If the offers have not appeared, open them in a new tab using the link above.';
-    }, 15000);
+    $('offerList').replaceChildren();
+    $('offerList').setAttribute('aria-busy', 'true');
+    $('wallStatus').textContent = 'Checking live offer prices...';
+    $('offerPage').textContent = '';
+    $('previousOffers').hidden = $('nextOffers').hidden = true;
+    const timer = setTimeout(() => controller.abort(), 15000);
+    try {
+      const url = new URL(offersUrl);
+      url.search = new URLSearchParams({ userId: username || guestId, page: offerPage, search: offerSearch });
+      const response = await fetch(url, { signal: controller.signal, cache: 'no-store', credentials: 'omit' });
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.error || 'Could not load live offers.');
+      if (offersRequest !== controller) return;
+      if (!Array.isArray(data.offers) || data.currency?.name !== 'Robux') throw new Error('Live offer prices are unavailable.');
+      const fragment = document.createDocumentFragment();
+      for (const offer of data.offers) {
+        if (!Number.isFinite(offer.reward) || offer.reward < 0) continue;
+        const link = new URL(offer.detailsUrl);
+        if (link.origin !== 'https://offerwall.gg' || !link.pathname.startsWith('/wall/' + publicKey + '/offer/')) continue;
+        const card = document.createElement('article');
+        card.className = 'live-offer';
+        const badge = document.createElement('span'); badge.className = 'tag';
+        badge.textContent = ({ variable: 'Variable reward', total: 'Multi-step total', estimate: 'Survey estimate', fixed: 'Provider reward' })[offer.rewardKind] || 'Provider reward';
+        const title = document.createElement('h3'); title.textContent = offer.name;
+        const description = document.createElement('p'); description.textContent = offer.requirements || offer.description || 'Read the requirements before starting.';
+        const amount = document.createElement('strong'); amount.className = 'offer-amount';
+        amount.textContent = offer.rewardKind === 'variable' ? 'Reward varies' : (offer.rewardKind === 'total' ? 'Up to ' : offer.rewardKind === 'estimate' ? 'Estimated ' : '') + format(offer.reward) + ' Robux';
+        const note = document.createElement('small');
+        note.textContent = ({ variable: 'The final amount is confirmed after completion.', total: 'Total across all paying steps, not per step.', estimate: 'The final credited amount may differ.', fixed: 'Credited after the provider confirms completion.' })[offer.rewardKind] || '';
+        const action = document.createElement('a'); action.className = 'card-link'; action.textContent = 'Review requirements ↗';
+        action.href = link.href; action.target = '_blank'; action.rel = 'noopener noreferrer';
+        card.append(badge, title, description, amount, note, action); fragment.append(card);
+      }
+      $('offerList').append(fragment);
+      $('offerRate').textContent = 'Current provider rate: ' + format(data.currency.perUsd) + ' Robux per US$1 of confirmed earnings.';
+      $('wallStatus').textContent = data.offers.length ? 'Live rewards from Offerwall.GG. Review requirements before starting.' : 'No offers match right now. Try another search or check back later.';
+      $('offerPage').textContent = 'Page ' + offerPage;
+      $('previousOffers').hidden = offerPage <= 1;
+      $('nextOffers').hidden = !data.hasMore;
+    } catch (error) {
+      if (offersRequest !== controller) return;
+      $('wallStatus').textContent = error.name === 'AbortError' ? 'Offers timed out. Retry or use the provider link above.' : error.message;
+      $('offerRate').textContent = 'Live rate unavailable. No estimated fallback prices are shown.';
+    } finally {
+      clearTimeout(timer);
+      if (offersRequest === controller) { offersRequest = null; $('offerList').removeAttribute('aria-busy'); }
+    }
   }
-  frame.addEventListener('load', () => { clearTimeout(wallTimer); });
-  $('loadOffers').addEventListener('click', loadWall);
+  $('loadOffers').addEventListener('click', () => void loadWall());
+  $('offerSearch').addEventListener('submit', event => { event.preventDefault(); offerSearch = $('offerQuery').value.trim(); offerPage = 1; void loadWall(); });
+  $('previousOffers').addEventListener('click', () => { offerPage = Math.max(1, offerPage - 1); void loadWall(); });
+  $('nextOffers').addEventListener('click', () => { offerPage++; void loadWall(); });
   if ('IntersectionObserver' in window) {
     const observer = new IntersectionObserver(entries => {
       if (entries.some(entry => entry.isIntersecting)) {
         observer.disconnect();
-        loadWall();
+        if (!wallStarted) void loadWall();
       }
     }, { rootMargin: '200px' });
     observer.observe($('offerwall'));
@@ -225,7 +269,7 @@
     if (!saved) $('profileNote').textContent = 'Your profile is available for this visit. Browser storage is disabled.';
     if (changed && wallStarted) {
       // Only an explicit identity change reloads the wall.
-      wallStarted = false;
+      offerPage = 1;
       loadWall();
     }
     dialog.close();

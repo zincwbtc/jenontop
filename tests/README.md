@@ -11,6 +11,7 @@ The test starts a temporary local HTTP server and runs headless Chrome. It:
 - Reproduces the former activity observer feedback loop with a 1,000-callback safety limit.
 - Checks login typing, Enter, Escape, backdrop dismissal, and close button behavior.
 - Verifies a guest's offerwall identity survives reloads and matches the new-tab link.
+- Checks exact provider prices, survey estimates, variable payouts and multi-step total labels.
 - Confirms scrolling does not reload the offerwall.
 - Checks logo alignment, artwork centering, and horizontal overflow at 1440, 768, 390, and 320 pixels.
 - Exercises support using a mocked endpoint, without sending Discord messages.

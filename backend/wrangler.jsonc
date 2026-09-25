@@ -4,6 +4,6 @@
   "compatibility_date": "2026-09-10",
   "compatibility_flags": ["nodejs_compat"],
   "triggers": { "crons": ["* * * * *"] },
-  "vars": { "ALLOWED_ORIGIN": "https://zincwbtc.github.io" },
+  "vars": { "ALLOWED_ORIGIN": "https://lootlaneblox.com,https://www.lootlaneblox.com,https://zincwbtc.github.io" },
   "d1_databases": [{ "binding": "DB", "database_name": "lootlane-test", "database_id": "d578c9a3-d046-436d-85b1-bcee05bda169", "migrations_dir": "migrations" }]
 }

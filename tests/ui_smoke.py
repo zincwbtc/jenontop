@@ -51,8 +51,12 @@ try:
         wall_requests = []
         def mock_wall(route):
             wall_requests.append(route.request.url)
-            route.fulfill(content_type="text/html", body="<body style='background:#102329;color:#d6eee6'><h1>Provider fixture</h1><div style='height:1600px'>Scrollable offers</div></body>")
-        page.route("https://offerwall.gg/**", mock_wall)
+            user = parse_qs(urlparse(route.request.url).query)["userId"][0]
+            offers = [{"id":i,"name":name,"requirements":"Complete the provider requirements.","reward":143.125,"rewardKind":kind,
+                       "detailsUrl":f"https://offerwall.gg/wall/c6e9d79d42b4ff5990ee1e9dbc1d7039/offer/{i}?userId={user}"}
+                      for i, (name, kind) in enumerate([("Game reward","fixed"),("Survey reward","estimate"),("Multi-step game","total"),("Variable offer","variable")], 1)]
+            route.fulfill(content_type="application/json", body=json.dumps({"offers":offers,"currency":{"name":"Robux","perUsd":70},"page":1,"hasMore":False}))
+        page.route("**/api/offers?*", mock_wall)
         reward_state = {"balance":53,"completedSurveys":1,"providerBalance":3.5,"storeCorrection":49.5}
         def mock_rewards(route):
             user = parse_qs(urlparse(route.request.url).query)["userId"][0]
@@ -68,12 +72,16 @@ try:
         assert len(wall_requests) == 0, "Wall should not load above the fold"
         page.screenshot(path=str(ARTIFACTS / "desktop.png"), full_page=True)
         page.locator("#offerwall").scroll_into_view_if_needed()
-        expect(page.locator("#offerwallFrame")).to_be_visible()
-        page.wait_for_function("document.querySelector('#offerwallFrame').src.includes('userId=')")
+        expect(page.locator(".live-offer")).to_have_count(4)
+        expect(page.locator(".offer-amount").nth(0)).to_have_text("143.125 Robux")
+        expect(page.locator(".offer-amount").nth(1)).to_have_text("Estimated 143.125 Robux")
+        expect(page.locator(".offer-amount").nth(2)).to_have_text("Up to 143.125 Robux")
+        expect(page.locator(".offer-amount").nth(3)).to_have_text("Reward varies")
+        expect(page.locator("#offerRate")).to_contain_text("70 Robux per US$1")
         page.wait_for_timeout(250)
         assert len(wall_requests) == 1, wall_requests
-        wall_url = page.locator("#offerwallFrame").get_attribute("src")
-        assert wall_url == page.locator("#offerwallOpen").get_attribute("href")
+        wall_url = page.locator("#offerwallOpen").get_attribute("href")
+        assert parse_qs(urlparse(wall_requests[-1]).query)["userId"] == parse_qs(urlparse(wall_url).query)["userId"]
         for i in range(8):
             page.mouse.wheel(0, 500 if i % 2 else -500)
             page.wait_for_timeout(70)
@@ -81,7 +89,7 @@ try:
         page.reload()
         page.locator("#offerwall").scroll_into_view_if_needed()
         page.wait_for_timeout(300)
-        assert page.locator("#offerwallFrame").get_attribute("src") == wall_url, "Guest identity must survive reload"
+        assert page.locator("#offerwallOpen").get_attribute("href") == wall_url, "Guest identity must survive reload"
 
         # All close paths and keyboard input, beyond the old 18-second freeze trigger.
         page.locator("#profileButton").click()
@@ -189,7 +197,7 @@ try:
         blocked = browser.new_context()
         blocked.add_init_script("Object.defineProperty(window, 'localStorage', {get(){throw new DOMException('Blocked','SecurityError')}})")
         blocked_page = blocked.new_page()
-        blocked_page.route("https://offerwall.gg/**", mock_wall)
+        blocked_page.route("**/api/offers?*", mock_wall)
         blocked_page.route("**/api/rewards?*", mock_rewards)
         blocked_page.goto(base)
         blocked_page.locator("#profileButton").click()

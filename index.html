@@ -6,9 +6,10 @@
   <meta name="theme-color" content="#09171b">
   <meta name="description" content="Explore offers, find your next challenge, and keep your Lootlane rewards in one place.">
   <title>Lootlane Rewards</title>
+  <link rel="canonical" href="https://lootlaneblox.com/">
   <link rel="icon" href="assets/lootlane-mark.svg" type="image/svg+xml">
-  <link rel="stylesheet" href="support.css?v=20260924b">
-  <script src="dashboard.js?v=20260924b" defer></script>
+  <link rel="stylesheet" href="support.css?v=20260924c">
+  <script src="dashboard.js?v=20260924c" defer></script>
 </head>
 <body>
   <svg class="icon-library" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
@@ -53,8 +54,12 @@
       <div class="offerwall-shell">
         <div class="wall-toolbar"><span class="wall-brand"><span class="status-dot"></span> Offerwall.GG</span><a id="offerwallOpen" class="text-link" target="_blank" rel="noopener noreferrer">Open in a new tab <span aria-hidden="true">&#8599;</span></a></div>
         <p id="earningIdentity" class="wall-footnote"></p>
-        <div class="offerwall-frame"><div class="wall-placeholder" id="wallPlaceholder"><svg class="coin-icon" aria-hidden="true"><use href="#icon-coin"/></svg><p id="wallStatus" role="status">Getting your rewards ready...</p><button class="secondary" type="button" id="loadOffers">Load offers</button></div><iframe id="offerwallFrame" title="Lootlane offers from Offerwall.GG" referrerpolicy="strict-origin-when-cross-origin" hidden></iframe></div>
-        <p class="wall-footnote" id="wallLoadNote">Offers missing or slow to load? Use the new-tab link above. Availability depends on the provider.</p>
+        <div class="reward-explainer"><strong>Know what you can earn.</strong><p>Survey amounts are estimates until confirmed. Variable rewards depend on the provider's final result. Multi-step totals require completing every paying step; one step earns only its own reward.</p><span id="offerRate">Loading the live Offerwall.GG rate...</span></div>
+        <form class="offer-search" id="offerSearch"><label for="offerQuery">Find an offer</label><input id="offerQuery" type="search" maxlength="80" placeholder="Search games, surveys and more"><button class="secondary" type="submit">Search</button></form>
+        <p id="wallStatus" class="offer-status" role="status">Getting your rewards ready...</p>
+        <div class="offer-grid" id="offerList" aria-label="Available offers"></div>
+        <div class="offer-pagination"><button class="secondary" type="button" id="loadOffers">Refresh offers</button><button class="secondary" type="button" id="previousOffers" hidden>Previous</button><span id="offerPage"></span><button class="secondary" type="button" id="nextOffers" hidden>Next</button></div>
+        <p class="wall-footnote">Lootlane credits 100% of the Robux amount confirmed by Offerwall.GG, with no additional conversion or deduction. Read the provider's requirements before starting.</p>
       </div>
     </section>
     <section id="dashboard" class="section dashboard" aria-labelledby="dashboardTitle">
