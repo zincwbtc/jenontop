@@ -25,8 +25,8 @@
   <meta name="twitter:image" content="https://lootlaneblox.com/assets/lootlane-social-v1.png?v=4e11cc7">
   <meta name="twitter:image:alt" content="Lootlane Rewards: Find your next reward. A block-style explorer surrounded by mint coins and floating platforms.">
   <link rel="icon" href="assets/lootlane-mark.svg" type="image/svg+xml">
-  <link rel="stylesheet" href="support.css?v=20260924f">
-  <script src="dashboard.js?v=20260925a" defer></script>
+  <link rel="stylesheet" href="support.css?v=20260925b">
+  <script src="dashboard.js?v=20260925b" defer></script>
 </head>
 <body>
   <svg class="icon-library" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
@@ -39,6 +39,7 @@
     <symbol id="icon-grid" viewBox="0 0 24 24"><rect x="3.5" y="3.5" width="7" height="7" rx="2" fill="none" stroke="currentColor" stroke-width="2"/><rect x="13.5" y="3.5" width="7" height="7" rx="2" fill="currentColor"/><rect x="3.5" y="13.5" width="7" height="7" rx="2" fill="currentColor"/><rect x="13.5" y="13.5" width="7" height="7" rx="2" fill="none" stroke="currentColor" stroke-width="2"/></symbol>
     <symbol id="icon-help" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9" fill="none" stroke="currentColor" stroke-width="2"/><path d="M9.3 9.4a2.8 2.8 0 0 1 5.4 1c0 1.9-2.7 2.4-2.7 4" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><circle cx="12" cy="17.6" r="1.2" fill="currentColor"/></symbol>
     <symbol id="icon-chat" viewBox="0 0 24 24"><path d="M5 4h14a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2h-7l-6 4v-4H5a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2Z" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M7 9h10M7 13h6" stroke="currentColor" stroke-width="1.8"/></symbol>
+    <symbol id="icon-discord" viewBox="0 0 24 24"><path d="M7.5 5.5c1.5-.6 3-.9 4.5-.9s3 .3 4.5.9c1.7 2.4 2.6 5.1 2.6 8.3-1.4 1.2-3 2-4.6 2.5l-.9-1.5c.7-.2 1.3-.5 1.9-.9-1.1.5-2.3.8-3.5.8s-2.4-.3-3.5-.8c.6.4 1.2.7 1.9.9l-.9 1.5c-1.6-.5-3.2-1.3-4.6-2.5 0-3.2.9-5.9 2.6-8.3Z" fill="currentColor"/><circle cx="9.4" cy="11.8" r="1.3" fill="#5865f2"/><circle cx="14.6" cy="11.8" r="1.3" fill="#5865f2"/></symbol>
   </svg>
   <a class="skip-link" href="#main">Skip to content</a>
   <header class="top">
@@ -91,12 +92,7 @@
   </main>
   <footer class="foot"><div class="wrap"><a class="brand footer-brand" href="#"><img src="assets/lootlane-mark.svg" width="30" height="30" alt=""><span class="brand-name">Lootlane <span>Rewards</span></span></a><p>An independent fan project. Not affiliated with Roblox.</p><p>Offers have provider eligibility requirements. Rewards appear after confirmation. Withdrawals unlock after 10 completed surveys and are paid to your Roblox account by our team.</p></div></footer>
   <aside class="support" aria-label="Support">
-    <section id="supportPanel" class="support-panel" hidden aria-labelledby="supportTitle">
-      <div class="support-head"><h2 id="supportTitle">A little help?</h2><button type="button" class="icon-button" id="closeSupport" aria-label="Close support"><svg class="icon" aria-hidden="true"><use href="#icon-close"/></svg></button></div>
-      <p>Your message goes to our team on Discord. Never send passwords or payment details.</p>
-      <form id="supportForm"><label for="supportMessage">Your question</label><textarea id="supportMessage" maxlength="1000" required placeholder="How can we help?"></textarea><label for="supportContact">Reply contact <span>(optional)</span></label><input id="supportContact" maxlength="160" placeholder="Where can we reply?"><button class="primary" id="sendSupport" type="submit">Send message</button><p id="supportStatus" role="status"></p></form>
-    </section>
-    <button class="support-toggle" id="supportToggle" type="button" aria-expanded="false" aria-controls="supportPanel"><svg class="icon" aria-hidden="true"><use href="#icon-chat"/></svg><span>Need a hand?</span></button>
+    <a class="support-toggle support-discord" id="supportDiscord" href="https://discord.gg/4Z2jCh4BsA" target="_blank" rel="noopener noreferrer" aria-label="Get help on our Discord (opens in a new tab)"><svg class="icon" aria-hidden="true"><use href="#icon-discord"/></svg><span>Help on Discord</span></a>
   </aside>
   <dialog id="loginDialog" class="login-dialog" aria-labelledby="loginTitle">
     <button type="button" class="icon-button login-close" id="closeLogin" aria-label="Close login"><svg class="icon" aria-hidden="true"><use href="#icon-close"/></svg></button>

@@ -123,6 +123,8 @@ h3{font-size:21px;line-height:1.3;letter-spacing:-.5px;margin:15px 0 8px}
 .foot p{font-size:11px;color:var(--muted);margin:14px auto 0;max-width:660px}
 .support{position:fixed;right:20px;bottom:20px;z-index:20}
 .support-toggle{display:flex;align-items:center;justify-content:center;gap:10px;min-height:48px;padding:12px 18px;border:1px solid #599582;border-radius:999px;background:#193e38;color:#d3ffe9;font-size:12px;font-weight:700;box-shadow:0 5px 18px #0004;margin-left:auto}
+.support-discord{background:#5865f2;border-color:#8c95ff;color:#fff;font-size:13px;text-decoration:none;transition:transform .15s ease,box-shadow .15s ease}
+.support-discord:hover,.support-discord:focus-visible{transform:translateY(-2px);box-shadow:0 8px 24px #5865f266}
 .support-panel{width:min(350px,calc(100vw - 32px));max-height:calc(100dvh - 100px);overflow:auto;margin-bottom:12px;border:1px solid #407566;border-radius:18px;padding:22px;background:#102329;box-shadow:0 8px 28px #0005}
 .support-head{display:flex;align-items:center;justify-content:space-between;gap:10px}
 .support-head h2{font-size:23px;margin:0}

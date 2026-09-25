@@ -190,15 +190,11 @@ try:
         page.locator("#refreshRewards").click()
         expect(page.locator("#balance")).to_have_text("106")
 
-        # Support tests never send a real Discord message.
-        page.route("**/api/shop", lambda route: route.fulfill(
-            content_type="application/json", body='{"ok":true}'))
-        page.locator("#supportToggle").click()
-        page.locator("#supportMessage").fill("UI test only")
-        page.locator("#sendSupport").click()
-        expect(page.locator("#supportStatus")).to_have_text("Message sent to support.")
-        page.locator("#closeSupport").click()
-        expect(page.locator("#supportPanel")).not_to_be_visible()
+        # Help button sends people to the Discord server (new tab), no in-page form.
+        help_link = page.locator("#supportDiscord")
+        expect(help_link).to_be_visible()
+        expect(help_link).to_have_attribute("href", "https://discord.gg/4Z2jCh4BsA")
+        expect(help_link).to_have_attribute("target", "_blank")
 
         for width in [1440, 768, 390, 320]:
             page.set_viewport_size({"width":width, "height":900})

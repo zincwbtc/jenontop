@@ -4,7 +4,6 @@
   const cloudflareOrigin = 'https://lootlane-test-backend.brycen0407.workers.dev';
   // GitHub Pages serves the .com frontend; the API stays on Cloudflare.
   const apiOrigin = cloudflareOrigin;
-  const supportUrl = apiOrigin + '/api/shop';
   const rewardsUrl = apiOrigin + '/api/rewards';
   const withdrawUrl = apiOrigin + '/api/withdraw';
   const offersUrl = apiOrigin + '/api/offers';
@@ -297,41 +296,5 @@
     dialog.close();
   });
 
-  const panel = $('supportPanel');
-  function setSupport(open) {
-    panel.hidden = !open;
-    $('supportToggle').setAttribute('aria-expanded', String(open));
-    if (open) $('supportMessage').focus();
-    else $('supportToggle').focus({ preventScroll: true });
-  }
-  $('supportToggle').addEventListener('click', () => setSupport(panel.hidden));
-  $('closeSupport').addEventListener('click', () => setSupport(false));
-  panel.addEventListener('keydown', event => { if (event.key === 'Escape') setSupport(false); });
-  $('supportForm').addEventListener('submit', async event => {
-    event.preventDefault();
-    const message = $('supportMessage').value.trim();
-    if (!message) { $('supportStatus').textContent = 'Write a message first.'; return; }
-    const button = $('sendSupport');
-    if (button.disabled) return;
-    button.disabled = true;
-    $('supportStatus').textContent = 'Sending...';
-    const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), 15000);
-    try {
-      const response = await fetch(supportUrl, {
-        method: 'POST', headers: { 'Content-Type': 'application/json' },
-        signal: controller.signal,
-        body: JSON.stringify({ action: 'support_message', message, contact: $('supportContact').value.trim() })
-      });
-      const result = await response.json();
-      if (!response.ok) throw new Error(result.error || 'Could not send. Please try again.');
-      $('supportForm').reset();
-      $('supportStatus').textContent = 'Message sent to support.';
-    } catch (error) {
-      $('supportStatus').textContent = error.name === 'AbortError' ? 'The request timed out. Please try again.' : error.message || 'Could not send. Please try again.';
-    } finally {
-      clearTimeout(timeout);
-      button.disabled = false;
-    }
-  });
+  // Help now goes to our Discord (bottom-right button links to the invite); no in-page form.
 })();
