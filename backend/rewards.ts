@@ -2,7 +2,8 @@ import { createHmac, timingSafeEqual } from 'node:crypto';
 
 const PUBLIC_KEY = 'c6e9d79d42b4ff5990ee1e9dbc1d7039';
 const SCALE = 10000;
-type Env = { DB: any; OFFERWALL_SECRET?: string; PAYOUT_WEBHOOK_URL?: string; TEST_ACCESS_KEY?: string };
+type Env = { DB: any; OFFERWALL_SECRET?: string; PAYOUT_WEBHOOK_URL?: string; TEST_ACCESS_KEY?: string;
+  FEED_EARNINGS_WEBHOOK_URL?: string; FEED_WITHDRAW_WEBHOOK_URL?: string };
 const REQUIRED_SURVEYS = 10;
 type Conversion = {
   transactionId: string; userId: string; currencyAmount: number | string;
@@ -37,6 +38,7 @@ export async function storeConversion(env: Env, item: Conversion) {
   if (rawUnits === 0 || (item.status === 'credited' && rawUnits < 0)) throw new Error('Invalid conversion amount');
   const units = Math.abs(rawUnits);
   const now = new Date().toISOString();
+  const seenBefore = await env.DB.prepare('SELECT 1 FROM reward_conversions WHERE transaction_id=?').bind(item.transactionId).first();
   // Multi-step goals are not completed surveys; metadata is authenticated by the API.
   const survey = /^survey\b/i.test(item.offerName || '') && !item.goalId ? 1 : 0;
   const result = await env.DB.prepare(`
@@ -53,6 +55,10 @@ export async function storeConversion(env: Env, item: Conversion) {
   `).bind(item.transactionId, item.userId, item.userId.toLowerCase(), units, item.status,
       survey, String(item.offerName || '').slice(0, 200), item.createdAt || now, now).first();
   if (!result) throw new Error('Conversion conflicts with stored reward');
+  // New real completion by a Roblox user (not a guest): show it in the public feed. Never blocks the reward.
+  if (!seenBefore && item.status === 'credited' && validUsername(item.userId)) {
+    try { await postFeed(env, 'earning', item.userId, units, String(item.offerName || 'Survey')); } catch {}
+  }
 }
 export async function providerConversions(env: Env, params: Record<string, string> = {}) {
   if (!env.OFFERWALL_SECRET) throw new Error('Rewards integration is not configured');
@@ -170,6 +176,51 @@ export async function handlePostback(request: Request, env: Env) {
   } catch { return new Response('RETRY', { status: 503 }); }
 }
 
+// ---------- Public activity feed (Discord #demo-earnings / #demo-withdrawals webhooks) ----------
+// Real users only show as a masked name ("Yessi********er") plus their own Roblox headshot.
+export function maskName(name: string) {
+  const shown = Math.max(1, Math.min(5, name.length - 4));
+  return name.slice(0, shown) + '*'.repeat(Math.max(4, name.length - shown - 2)) + name.slice(-2);
+}
+async function robloxHeadshot(username: string): Promise<string | undefined> {
+  try {
+    const lookup = await fetch('https://users.roblox.com/v1/usernames/users', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' }, signal: AbortSignal.timeout(4000),
+      body: JSON.stringify({ usernames: [username], excludeBannedUsers: true }),
+    });
+    const id = ((await lookup.json()) as any)?.data?.[0]?.id;
+    if (!id) return undefined;
+    const thumb = await fetch('https://thumbnails.roblox.com/v1/users/avatar-headshot?userIds=' + id + '&size=150x150&format=Png&isCircular=false', { signal: AbortSignal.timeout(4000) });
+    return ((await thumb.json()) as any)?.data?.[0]?.imageUrl || undefined;
+  } catch { return undefined; }
+}
+function feedWebhook(value?: string) {
+  if (!value) return null;
+  const url = new URL(value);
+  if (url.protocol !== 'https:' || !['discord.com', 'discordapp.com'].includes(url.hostname) || !url.pathname.startsWith('/api/webhooks/')) return null;
+  return url;
+}
+export async function postFeed(env: Env, kind: 'earning' | 'withdrawal', username: string, units: number, offerName = '') {
+  const hook = feedWebhook(kind === 'earning' ? env.FEED_EARNINGS_WEBHOOK_URL : env.FEED_WITHDRAW_WEBHOOK_URL);
+  if (!hook) return;
+  const amount = Number((units / SCALE).toFixed(2)).toLocaleString('en-US');
+  const name = maskName(username).replace(/\*/g, '\\*').replace(/_/g, '\\_'); // keep Discord from reading * and _ as formatting
+  const embed: any = kind === 'earning'
+    ? { description: '**' + name + '** completed an offer for **' + amount + '** <:robux:1553178247007707146>',
+        fields: [{ name: 'Offerwall', value: 'Lootlane Surveys', inline: true }, { name: 'Offer name', value: offerName.slice(0, 80) || 'Survey', inline: true }] }
+    : { description: '**' + name + '** withdrew **' + amount + '** <:robux:1553178247007707146>', fields: [{ name: 'Method', value: 'Gamepass' }] };
+  embed.color = 0x91edc8;
+  embed.footer = { text: 'Lootlane' };
+  embed.timestamp = new Date().toISOString();
+  const avatar = await robloxHeadshot(username);
+  if (avatar) embed.thumbnail = { url: avatar };
+  const response = await fetch(hook, {
+    method: 'POST', headers: { 'Content-Type': 'application/json' }, redirect: 'error', signal: AbortSignal.timeout(8000),
+    body: JSON.stringify({ allowed_mentions: { parse: [] }, embeds: [embed] }),
+  });
+  await response.body?.cancel();
+}
+
 function payoutWebhook(env: Env) {
   const url = new URL(env.PAYOUT_WEBHOOK_URL || '');
   if (url.protocol !== 'https:' || !['discord.com', 'discordapp.com'].includes(url.hostname) || !url.pathname.startsWith('/api/webhooks/')) throw new Error('Invalid payout webhook');
@@ -256,6 +307,7 @@ export async function handleWithdraw(request: Request, env: Env) {
   }
   let notified = true;
   try { await notifyWithdrawal(env, created); } catch { notified = false; }
+  try { await postFeed(env, 'withdrawal', created.user_id, created.amount_units); } catch {}
   return Response.json({
     ok: true, notified,
     withdrawal: { id: created.id, amount: created.amount_units / SCALE, surveysUsed: created.surveys_used, status: 'pending', createdAt: created.created_at },
