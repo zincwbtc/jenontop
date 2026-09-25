@@ -297,4 +297,33 @@
   });
 
   // Help now goes to our Discord (bottom-right button links to the invite); no in-page form.
+
+  // DEMO activity pop-ups (bottom-left). These are examples, not real users or real payouts:
+  // names are randomly generated and every pop-up is labeled DEMO. Real activity should never be mixed in here.
+  const demoFeed = $('demoFeed');
+  if (demoFeed) {
+    const letters = 'abcdefghijklmnopqrstuvwxyz';
+    const pick = list => list[Math.floor(Math.random() * list.length)];
+    const fakeName = () => {
+      const start = Array.from({ length: 3 }, () => pick(letters)).join('');
+      return start.charAt(0).toUpperCase() + start.slice(1) + '***';
+    };
+    const demoEvent = () => (Math.random() < 0.7
+      ? { verb: 'completed a survey for', amount: pick([3, 5, 5, 8, 10, 15, 15, 25, 50, 100]) }
+      : { verb: 'withdrew', amount: pick([50, 75, 100, 100, 150, 200]) });
+    const showDemo = () => {
+      const { verb, amount } = demoEvent();
+      const toast = document.createElement('div');
+      toast.className = 'demo-toast';
+      toast.innerHTML = '<span class="demo-badge">DEMO</span><div><strong></strong> <span class="demo-text"></span><small>Example activity, not a real user or payout</small></div>';
+      toast.querySelector('strong').textContent = fakeName();
+      toast.querySelector('.demo-text').textContent = verb + ' ' + amount + ' Robux';
+      demoFeed.append(toast);
+      requestAnimationFrame(() => toast.classList.add('show'));
+      if (!new URLSearchParams(location.search).has('demopreview')) setTimeout(() => { toast.classList.remove('show'); setTimeout(() => toast.remove(), 400); }, 6000);
+    };
+    const schedule = () => setTimeout(() => { if (!document.hidden) showDemo(); schedule(); }, 60000 + Math.random() * 120000);
+    if (new URLSearchParams(location.search).has('demopreview')) { showDemo(); demoFeed.lastChild.classList.add('show'); return; } // design check only
+    setTimeout(() => { showDemo(); schedule(); }, 15000 + Math.random() * 15000);
+  }
 })();
