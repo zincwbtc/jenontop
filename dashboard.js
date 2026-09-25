@@ -316,8 +316,8 @@
       const toast = document.createElement('div');
       toast.className = 'demo-toast';
       toast.innerHTML = '<img class="demo-avatar" alt="" width="36" height="36"><div><span class="demo-badge">DEMO</span> <strong></strong> <span class="demo-text"></span><small>Example activity, not a real user or payout</small></div>';
-      // Roblox-style headshots we drew ourselves (assets/demo-avatars), never a real Roblox user's picture.
-      toast.querySelector('img').src = 'assets/demo-avatars/' + String(1 + Math.floor(Math.random() * 30)).padStart(2, '0') + '.png';
+      // Official Roblox catalog character renders (assets/demo-avatars), never a real player's avatar.
+      toast.querySelector('img').src = 'assets/demo-avatars/' + String(1 + Math.floor(Math.random() * 22)).padStart(2, '0') + '.png';
       toast.querySelector('strong').textContent = fakeName();
       toast.querySelector('.demo-text').textContent = verb + ' ' + amount + ' Robux';
       demoFeed.append(toast);
