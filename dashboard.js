@@ -317,7 +317,7 @@
       toast.className = 'demo-toast';
       toast.innerHTML = '<img class="demo-avatar" alt="" width="36" height="36"><div><span class="demo-badge">DEMO</span> <strong></strong> <span class="demo-text"></span><small>Example activity, not a real user or payout</small></div>';
       // Official Roblox catalog character renders (assets/demo-avatars), never a real player's avatar.
-      toast.querySelector('img').src = 'assets/demo-avatars/' + String(1 + Math.floor(Math.random() * 20)).padStart(2, '0') + '.png';
+      toast.querySelector('img').src = 'assets/demo-avatars/' + String(1 + Math.floor(Math.random() * 18)).padStart(2, '0') + '.png';
       toast.querySelector('strong').textContent = fakeName();
       toast.querySelector('.demo-text').textContent = verb + ' ' + amount + ' Robux';
       demoFeed.append(toast);
@@ -325,9 +325,9 @@
       if (!new URLSearchParams(location.search).has('demopreview')) setTimeout(() => { toast.classList.remove('show'); setTimeout(() => toast.remove(), 400); }, 6000);
     };
     // Mostly every 1-2 minutes; about 1 in 6 times a longer ~4-6 minute gap.
-    const nextWait = () => (Math.random() < 1 / 6 ? 240000 + Math.random() * 120000 : 60000 + Math.random() * 60000);
+    const nextWait = () => (Math.random() < 1 / 6 ? 240000 + Math.random() * 120000 : 60000 + Math.random() * 18);
     const schedule = () => setTimeout(() => { if (!document.hidden) showDemo(); schedule(); }, nextWait());
     if (new URLSearchParams(location.search).has('demopreview')) { showDemo(); demoFeed.lastChild.classList.add('show'); return; } // design check only
-    setTimeout(() => { showDemo(); schedule(); }, 15000 + Math.random() * 15000);
+    setTimeout(() => { showDemo(); schedule(); }, 15000 + Math.random() * 18);
   }
 })();
