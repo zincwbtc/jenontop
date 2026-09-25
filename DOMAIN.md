@@ -1,31 +1,15 @@
-# lootlaneblox.com on Cloudflare
+# lootlaneblox.com — GitHub Pages
 
-The full site and API deploy together to the existing Cloudflare Worker `lootlane-test-backend` in account `44014acb04e2be1ced2a310b54003139`. Its preview address is https://lootlane-test-backend.brycen0407.workers.dev/. The original GitHub Pages site remains available as a fallback.
+GitHub Pages serves the frontend from `zincwbtc/jenontop`, branch `main`, repository root. The custom domain is `lootlaneblox.com`, recorded both in GitHub Pages settings and the root `CNAME` file. Visitors keep the .com address; this is not a forwarding redirect to github.io.
 
-The frontend uses same-origin `/api/` endpoints when opened on the Worker or either custom domain. Existing Offerwall callbacks, D1 balances, provider secrets, and withdrawal records keep using the same Worker.
+Cloudflare manages DNS. GoDaddy remains the registrar, with nameservers `brenna.ns.cloudflare.com` and `uriah.ns.cloudflare.com`. The Cloudflare zone is active. The owner configured its DNS separately.
 
-## Current domain blocker
+The rewards, offers, support and withdrawal API remains at `https://lootlane-test-backend.brycen0407.workers.dev`. The frontend must call that origin, not relative `/api/` URLs: GitHub Pages serves static files only. Both .com origins are already allowed by the API.
 
-GoDaddy still serves the domain's DNS with `ns71.domaincontrol.com` and `ns72.domaincontrol.com`. The provided DNS screenshot shows an apex parking record, `www` pointing to the apex, `_domainconnect`, and `_dmarc` records.
+## Publishing
 
-Cloudflare's saved Wrangler login can deploy Workers but cannot create the zone. The API returned HTTP 403: `Requires permission "com.cloudflare.api.account.zone.create" to create zones for the selected account`. No assigned Cloudflare nameservers are available until the zone is created.
+The owner authorized automatic publishing after chat changes. Commit task files, then run `powershell -NoProfile -File scripts/publish.ps1`. It checks the site, pushes origin/main, and deploys the Cloudflare backend and its optional static backup. GitHub Pages publishes the .com frontend from the push. DNS needs no change for later content updates.
 
-## One-time activation
+Do not attach the .com to the Worker or migrate the frontend to Cloudflare Pages. Keep the existing CNAME file. When changing the domain, check GitHub Pages DNS health, certificate status, HTTPS, and live API requests.
 
-1. In the owner's Cloudflare account, add `lootlaneblox.com` on the Free plan. Review imported records and preserve `_dmarc` and any email/verification records. Do not copy GoDaddy's apex NS/SOA records as ordinary Cloudflare records.
-2. At GoDaddy, change **Nameservers** to the exact two nameservers assigned by Cloudflare. Keep the domain registered with GoDaddy.
-3. Once the zone is active, remove the imported apex parking record and the old `www` CNAME, then attach both custom domains to `lootlane-test-backend`. Cloudflare's Worker custom-domain setup creates DNS records and certificates. Preserve unrelated records.
-4. Persist the attachment in `backend/wrangler.jsonc` with `routes: [{"pattern":"lootlaneblox.com","custom_domain":true},{"pattern":"www.lootlaneblox.com","custom_domain":true}]` and `workers_dev: true`. Do not add these routes before the zone exists and permissions allow attachment; doing so would block otherwise-working deployments.
-5. Verify both HTTPS domains, static assets, live offer prices, reward reads, and support preflights. Do not submit a real withdrawal or support message during verification.
-
-There is no GitHub Pages `CNAME` file: the .com will serve Cloudflare directly. Do not point this domain at GitHub Pages IP addresses for this setup.
-
-## Publishing future chat updates
-
-The owner authorized automatic publishing in `AGENTS.md`. After committing task changes, run `powershell -NoProfile -File scripts/publish.ps1` from the repository root.
-
-This validates a clean `main` checkout, runs backend and browser checks, builds the public site, checks the Cloudflare bundle, pushes `origin/main`, and deploys the site and API together. Wrangler's build hook also regenerates static assets when deploying directly from `backend`.
-
-This is a local publishing workflow used after chat changes, not a background GitHub Actions job. It uses saved Git Credential Manager and Wrangler logins; credentials are never committed.
-
-References: https://developers.cloudflare.com/workers/static-assets/ and https://developers.cloudflare.com/workers/configuration/routing/custom-domains/
+GitHub custom-domain documentation: https://docs.github.com/en/pages/configuring-a-custom-domain-for-your-github-pages-site/managing-a-custom-domain-for-your-github-pages-site

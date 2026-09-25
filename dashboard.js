@@ -2,7 +2,8 @@
   'use strict';
   const publicKey = 'c6e9d79d42b4ff5990ee1e9dbc1d7039';
   const cloudflareOrigin = 'https://lootlane-test-backend.brycen0407.workers.dev';
-  const apiOrigin = ['lootlaneblox.com', 'www.lootlaneblox.com', 'lootlane-test-backend.brycen0407.workers.dev'].includes(location.hostname) ? location.origin : cloudflareOrigin;
+  // GitHub Pages serves the .com frontend; the API stays on Cloudflare.
+  const apiOrigin = cloudflareOrigin;
   const supportUrl = apiOrigin + '/api/shop';
   const rewardsUrl = apiOrigin + '/api/rewards';
   const withdrawUrl = apiOrigin + '/api/withdraw';

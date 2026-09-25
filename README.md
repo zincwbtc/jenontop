@@ -1,6 +1,6 @@
 # Lootlane Rewards
 
-Rewards site and API hosted together on Cloudflare Workers with D1 storage. GitHub Pages remains available as a fallback.
+Rewards site hosted on GitHub Pages at `lootlaneblox.com`, with Cloudflare DNS and a Cloudflare Worker/D1 backend.
 
 - `index.html`, `support.css`, `dashboard.js`: responsive site and live Offerwall.GG catalog.
 - [Domain setup](DOMAIN.md): `lootlaneblox.com` DNS cutover and hosting configuration.
