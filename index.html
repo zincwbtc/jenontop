@@ -8,8 +8,8 @@
   <title>Lootlane Rewards</title>
   <link rel="canonical" href="https://lootlaneblox.com/">
   <link rel="icon" href="assets/lootlane-mark.svg" type="image/svg+xml">
-  <link rel="stylesheet" href="support.css?v=20260924d">
-  <script src="dashboard.js?v=20260924e" defer></script>
+  <link rel="stylesheet" href="support.css?v=20260924f">
+  <script src="dashboard.js?v=20260924f" defer></script>
 </head>
 <body>
   <svg class="icon-library" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
@@ -41,21 +41,15 @@
       <img class="hero-art" src="assets/reward-world.svg" width="760" height="260" fetchpriority="high" alt="A block-style explorer surrounded by mint reward coins, stars, and floating game platforms">
       <div class="pool-card"><svg class="coin-icon" aria-hidden="true"><use href="#icon-coin"/></svg><div><span class="muted">Configured payout pool</span><strong><span id="payoutPool">423,567</span> <small>Robux</small></strong></div><span class="pool-note">Withdraw after 10 surveys</span></div>
     </section>
-    <section id="surveys" class="section" aria-labelledby="surveysTitle">
-      <div class="section-heading"><span class="kicker">FIND YOUR FLOW</span><h2 id="surveysTitle">Small quests. New possibilities.</h2><p>A taste of what's next. Browse available partner offers below.</p></div>
-      <div class="grid survey-grid">
-        <article class="card mint"><div class="card-top"><span class="tag">Quick &amp; curious</span><span class="preview-label">Preview</span></div><div class="survey-icon"><svg aria-hidden="true"><use href="#icon-spin"/></svg></div><h3>Daily Spin</h3><p>A fresh perspective on the games and worlds you love.</p><a class="card-link" href="#offerwall">Explore offers <svg class="icon" aria-hidden="true"><use href="#icon-arrow"/></svg></a></article>
-        <article class="card lilac"><div class="card-top"><span class="tag">Make your voice count</span><span class="preview-label">Preview</span></div><div class="survey-icon"><svg aria-hidden="true"><use href="#icon-pulse"/></svg></div><h3>Player Pulse</h3><p>Share what makes a great game and inspire what's next.</p><a class="card-link" href="#offerwall">Explore offers <svg class="icon" aria-hidden="true"><use href="#icon-arrow"/></svg></a></article>
-        <article class="card gold"><div class="card-top"><span class="tag">For the creative ones</span><span class="preview-label">Preview</span></div><div class="survey-icon"><svg aria-hidden="true"><use href="#icon-game"/></svg></div><h3>Game Creator Lab</h3><p>Bring your ideas and discover new experiences to try.</p><a class="card-link" href="#offerwall">Explore offers <svg class="icon" aria-hidden="true"><use href="#icon-arrow"/></svg></a></article>
-      </div>
-    </section>
     <section id="offerwall" class="section" aria-labelledby="offersTitle">
-      <div class="section-heading"><span class="kicker">THE REWARD ARCADE</span><h2 id="offersTitle">Find your next adventure.</h2><p>Explore available offers from Offerwall.GG. Check each offer's eligibility and requirements before starting.</p></div>
+      <div class="section-heading"><span class="kicker">LIVE SURVEYS &amp; REWARDS</span><h2 id="offersTitle">Find a survey. See the reward.</h2><p>Browse real surveys from Offerwall.GG, starting with smaller rewards. Availability depends on your location, device and eligibility.</p></div>
       <div class="offerwall-shell">
-        <div class="wall-toolbar"><span class="wall-brand"><span class="status-dot"></span> Offerwall.GG</span><a id="offerwallOpen" class="text-link" target="_blank" rel="noopener noreferrer">Open in a new tab <span aria-hidden="true">&#8599;</span></a></div>
+        <div class="wall-toolbar"><span class="wall-brand"><span class="status-dot"></span> Offerwall.GG</span><a id="offerwallOpen" class="text-link" target="_blank" rel="noopener noreferrer">Browse on provider <span aria-hidden="true">&#8599;</span></a></div>
         <p id="earningIdentity" class="wall-footnote"></p>
-        <div class="reward-explainer"><strong>Know what you can earn.</strong><p>Survey amounts are estimates until confirmed. Variable rewards depend on the provider's final result. Multi-step totals require completing every paying step; one step earns only its own reward.</p><span id="offerRate">Loading the live Offerwall.GG rate...</span></div>
-        <form class="offer-search" id="offerSearch"><label for="offerQuery">Find an offer</label><input id="offerQuery" type="search" maxlength="80" placeholder="Search games, surveys and more"><button class="secondary" type="submit">Search</button></form>
+        <div class="reward-explainer"><strong>Know what you can earn.</strong><p>Each survey shows its live estimated reward. You must qualify and finish; screening out may pay less or nothing. Reward filters are browsing limits, not promises of a 15, 30, 50 or 100 Robux payout.</p><span id="offerRate">Loading the live Offerwall.GG rate...</span></div>
+        <div class="offer-filters" role="group" aria-label="Offer type"><button class="secondary" type="button" data-offer-category="survey" aria-pressed="true">Surveys</button><button class="secondary" type="button" data-offer-category="all" aria-pressed="false">All allowed offers</button></div>
+        <div class="offer-filters" id="surveyRewardFilters"><label for="offerMaxReward">Survey reward</label><select id="offerMaxReward" aria-describedby="surveyFilterNote"><option value="15">Up to 15 Robux</option><option value="30">Up to 30 Robux</option><option value="50">Up to 50 Robux</option><option value="100" selected>Up to 100 Robux</option><option value="any">Any reward</option></select><p id="surveyFilterNote">Smallest listed rewards first. Choose Any reward to include higher estimates and survey partners with variable rewards.</p></div>
+        <form class="offer-search" id="offerSearch"><label for="offerQuery">Search this view</label><input id="offerQuery" type="search" maxlength="80" placeholder="Search available surveys or offers"><button class="secondary" type="submit">Search</button></form>
         <p id="wallStatus" class="offer-status" role="status">Getting your rewards ready...</p>
         <div class="offer-grid" id="offerList" aria-label="Available offers"></div>
         <div class="offer-pagination"><button class="secondary" type="button" id="loadOffers">Refresh offers</button><button class="secondary" type="button" id="previousOffers" hidden>Previous</button><span id="offerPage"></span><button class="secondary" type="button" id="nextOffers" hidden>Next</button></div>

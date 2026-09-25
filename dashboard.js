@@ -145,9 +145,14 @@
   let offersRequest;
   let offerPage = 1;
   let offerSearch = '';
+  let offerCategory = 'survey';
+  let offerMaxReward = '100';
   function wallUrl() {
     const url = new URL('https://offerwall.gg/wall/' + publicKey);
     url.searchParams.set('userId', username || guestId);
+    if (offerCategory === 'survey') url.searchParams.set('category', 'survey');
+    url.searchParams.set('sort', 'popular');
+    if (offerSearch) url.searchParams.set('search', offerSearch);
     return url.href;
   }
   function updateProfile() {
@@ -168,6 +173,9 @@
     const controller = new AbortController();
     offersRequest = controller;
     wallStarted = true;
+    $('offerwallOpen').href = wallUrl();
+    $('surveyRewardFilters').hidden = offerCategory !== 'survey';
+    $('offerList').setAttribute('aria-label', offerCategory === 'survey' ? 'Available surveys' : 'Available offers');
     $('offerList').replaceChildren();
     $('offerList').setAttribute('aria-busy', 'true');
     $('wallStatus').textContent = 'Checking live offer prices...';
@@ -176,7 +184,8 @@
     const timer = setTimeout(() => controller.abort(), 15000);
     try {
       const url = new URL(offersUrl);
-      url.search = new URLSearchParams({ userId: username || guestId, page: offerPage, search: offerSearch });
+      url.search = new URLSearchParams({ userId: username || guestId, page: offerPage, search: offerSearch,
+        category: offerCategory, maxReward: offerMaxReward });
       const response = await fetch(url, { signal: controller.signal, cache: 'no-store', credentials: 'omit' });
       const data = await response.json();
       if (!response.ok) throw new Error(data.error || 'Could not load live offers.');
@@ -190,20 +199,22 @@
         const card = document.createElement('article');
         card.className = 'live-offer';
         const badge = document.createElement('span'); badge.className = 'tag';
-        badge.textContent = ({ variable: 'Variable reward', total: 'Multi-step total', estimate: 'Survey estimate', fixed: 'Provider reward' })[offer.rewardKind] || 'Provider reward';
+        badge.textContent = ({ variable: 'Variable reward', total: 'Multi-step offer', estimate: 'Survey estimate', fixed: 'Provider reward' })[offer.rewardKind] || 'Provider reward';
         const title = document.createElement('h3'); title.textContent = offer.name;
         const description = document.createElement('p'); description.textContent = offer.requirements || offer.description || 'Read the requirements before starting.';
         const amount = document.createElement('strong'); amount.className = 'offer-amount';
-        amount.textContent = offer.rewardKind === 'variable' ? 'Reward varies' : (offer.rewardKind === 'total' ? 'Up to ' : offer.rewardKind === 'estimate' ? 'Estimated ' : '') + format(offer.reward) + ' Robux';
+        amount.textContent = offer.rewardKind === 'variable' ? 'Reward varies' : offer.rewardKind === 'total' ? 'Rewards by milestone' : (offer.rewardKind === 'estimate' ? 'Estimated ' : '') + format(offer.reward) + ' Robux';
         const note = document.createElement('small');
-        note.textContent = ({ variable: 'The final amount is confirmed after completion.', total: 'Total across all paying steps, not per step.', estimate: 'The final credited amount may differ.', fixed: 'Credited after the provider confirms completion.' })[offer.rewardKind] || '';
+        note.textContent = ({ variable: 'Check your matched survey or offer for its reward before starting.', total: 'Up to ' + format(offer.reward) + ' Robux combined across all paying milestones. Review each step, deadline and any purchase requirement.', estimate: 'Qualification required. Screening out may pay less or nothing; the provider confirms the final amount.', fixed: 'Credited after the provider confirms completion.' })[offer.rewardKind] || '';
         const action = document.createElement('a'); action.className = 'card-link'; action.textContent = 'Review requirements ↗';
         action.href = link.href; action.target = '_blank'; action.rel = 'noopener noreferrer';
         card.append(badge, title, description, amount, note, action); fragment.append(card);
       }
       $('offerList').append(fragment);
       $('offerRate').textContent = 'Current provider rate: ' + format(data.currency.perUsd) + ' Robux per US$1 of confirmed earnings.';
-      $('wallStatus').textContent = data.offers.length ? 'Live rewards from Offerwall.GG. Review requirements before starting.' : 'No offers match right now. Try another search or check back later.';
+      $('wallStatus').textContent = offerCategory === 'survey'
+        ? (data.offers.length ? 'Live surveys, smallest listed rewards first. Amounts are estimates, not guaranteed payouts.' : 'No surveys match this reward filter for your location and device right now. Try Any reward, clear your search, or check back later.')
+        : (data.offers.length ? 'Live offers allowed by Lootlane\'s provider settings. Review each offer\'s requirements before starting.' : 'No offers match right now. Try another search or check back later.');
       $('offerPage').textContent = 'Page ' + offerPage;
       $('previousOffers').hidden = offerPage <= 1;
       $('nextOffers').hidden = !data.hasMore;
@@ -217,6 +228,12 @@
     }
   }
   $('loadOffers').addEventListener('click', () => void loadWall());
+  document.querySelectorAll('[data-offer-category]').forEach(button => button.addEventListener('click', () => {
+    offerCategory = button.dataset.offerCategory;
+    document.querySelectorAll('[data-offer-category]').forEach(item => item.setAttribute('aria-pressed', String(item === button)));
+    offerPage = 1; void loadWall();
+  }));
+  $('offerMaxReward').addEventListener('change', () => { offerMaxReward = $('offerMaxReward').value; offerPage = 1; void loadWall(); });
   $('offerSearch').addEventListener('submit', event => { event.preventDefault(); offerSearch = $('offerQuery').value.trim(); offerPage = 1; void loadWall(); });
   $('previousOffers').addEventListener('click', () => { offerPage = Math.max(1, offerPage - 1); void loadWall(); });
   $('nextOffers').addEventListener('click', () => { offerPage++; void loadWall(); });

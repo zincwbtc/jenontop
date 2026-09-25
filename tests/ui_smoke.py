@@ -49,12 +49,23 @@ try:
         errors = []
         page.on("pageerror", lambda error: errors.append(str(error)))
         wall_requests = []
+        wall_mode = {"empty":False,"failed":False}
         def mock_wall(route):
             wall_requests.append(route.request.url)
-            user = parse_qs(urlparse(route.request.url).query)["userId"][0]
+            query = parse_qs(urlparse(route.request.url).query)
+            user = query["userId"][0]
+            if wall_mode["failed"]:
+                route.fulfill(status=503, content_type="application/json", body='{"error":"Live offer prices are unavailable."}')
+                return
             offers = [{"id":i,"name":name,"requirements":"Complete the provider requirements.","reward":143.125,"rewardKind":kind,
                        "detailsUrl":f"https://offerwall.gg/wall/c6e9d79d42b4ff5990ee1e9dbc1d7039/offer/{i}?userId={user}"}
                       for i, (name, kind) in enumerate([("Game reward","fixed"),("Survey reward","estimate"),("Multi-step game","total"),("Variable offer","variable")], 1)]
+            if query.get("category") == ["survey"]:
+                offers = [{**offers[1],"id":i,"name":f"Survey {i}","reward":reward}
+                          for i, reward in enumerate([15,30,50,100],1)
+                          if query["maxReward"] == ["any"] or reward <= int(query["maxReward"][0])]
+            if wall_mode["empty"]:
+                offers = []
             route.fulfill(content_type="application/json", body=json.dumps({"offers":offers,"currency":{"name":"Robux","perUsd":70},"page":1,"hasMore":False}))
         page.route("**/api/offers?*", mock_wall)
         reward_state = {"balance":53,"completedSurveys":1,"providerBalance":3.5,"storeCorrection":49.5}
@@ -69,14 +80,14 @@ try:
         page.route("**/api/rewards?*", mock_rewards)
         page.goto(base)
         expect(page.locator("#profileButton")).to_have_text("Log in")
-        assert len(wall_requests) == 0, "Wall should not load above the fold"
         page.screenshot(path=str(ARTIFACTS / "desktop.png"), full_page=True)
         page.locator("#offerwall").scroll_into_view_if_needed()
         expect(page.locator(".live-offer")).to_have_count(4)
-        expect(page.locator(".offer-amount").nth(0)).to_have_text("143.125 Robux")
-        expect(page.locator(".offer-amount").nth(1)).to_have_text("Estimated 143.125 Robux")
-        expect(page.locator(".offer-amount").nth(2)).to_have_text("Up to 143.125 Robux")
-        expect(page.locator(".offer-amount").nth(3)).to_have_text("Reward varies")
+        expect(page.locator(".offer-amount").nth(0)).to_have_text("Estimated 15 Robux")
+        expect(page.locator(".offer-amount").nth(3)).to_have_text("Estimated 100 Robux")
+        assert parse_qs(urlparse(wall_requests[-1]).query)["category"] == ["survey"]
+        assert parse_qs(urlparse(wall_requests[-1]).query)["maxReward"] == ["100"]
+        assert page.locator(".preview-label").count() == 0
         expect(page.locator("#offerRate")).to_contain_text("70 Robux per US$1")
         page.wait_for_timeout(250)
         assert len(wall_requests) == 1, wall_requests
@@ -86,6 +97,29 @@ try:
             page.mouse.wheel(0, 500 if i % 2 else -500)
             page.wait_for_timeout(70)
         assert len(wall_requests) == 1, "Scrolling must not reload offers"
+        for limit, count in [("15",1),("30",2),("50",3),("100",4)]:
+            page.locator("#offerMaxReward").select_option(limit)
+            expect(page.locator(".live-offer")).to_have_count(count)
+            assert parse_qs(urlparse(wall_requests[-1]).query)["page"] == ["1"]
+        page.locator('[data-offer-category="all"]').click()
+        expect(page.locator("#surveyRewardFilters")).not_to_be_visible()
+        expect(page.locator(".offer-amount").nth(0)).to_have_text("143.125 Robux")
+        expect(page.locator(".offer-amount").nth(2)).to_have_text("Rewards by milestone")
+        expect(page.locator(".live-offer").nth(2)).to_contain_text("Up to 143.125 Robux combined across all paying milestones")
+        expect(page.locator(".offer-amount").nth(3)).to_have_text("Reward varies")
+        page.locator('[data-offer-category="survey"]').click()
+        expect(page.locator("#surveyRewardFilters")).to_be_visible()
+        expect(page.locator(".offer-amount").nth(0)).to_have_text("Estimated 15 Robux")
+        assert parse_qs(urlparse(page.locator("#offerwallOpen").get_attribute("href")).query)["category"] == ["survey"]
+        wall_mode["empty"] = True
+        page.locator("#loadOffers").click()
+        expect(page.locator("#wallStatus")).to_contain_text("No surveys match")
+        expect(page.locator(".live-offer")).to_have_count(0)
+        wall_mode.update(empty=False,failed=True)
+        page.locator("#loadOffers").click()
+        expect(page.locator("#wallStatus")).to_contain_text("Live offer prices are unavailable")
+        expect(page.locator(".live-offer")).to_have_count(0)
+        wall_mode["failed"] = False
         page.reload()
         page.locator("#offerwall").scroll_into_view_if_needed()
         page.wait_for_timeout(300)

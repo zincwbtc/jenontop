@@ -29,13 +29,15 @@ test('custom domain origins are exact matches and old site remains supported dur
   for (const origin of [null, 'null', 'http://lootlaneblox.com', 'https://lootlaneblox.com.evil.test']) assert.equal(allowedOrigin(origin, origins), false);
 });
 test('offers target the visitor, preserve the provider rate, and expose no secret or revenue fields', async t => {
-  const request = new Request('https://worker.test/api/offers?userId=Player_One&page=2', {headers: {'User-Agent': 'iPhone'}});
+  const request = new Request('https://worker.test/api/offers?userId=Player_One&page=2&category=all', {headers: {'User-Agent': 'iPhone'}});
   request.cf = {country: 'CA'};
   t.mock.method(globalThis, 'fetch', async (input, options) => {
     const url = new URL(input);
     assert.equal(url.searchParams.get('country'), 'CA');
     assert.equal(url.searchParams.get('device'), 'ios');
     assert.equal(url.searchParams.get('page'), '2');
+    assert.equal(url.searchParams.get('sort'), 'popular');
+    assert.equal(url.searchParams.has('category'), false);
     assert.equal(options.headers['X-Api-Key'], 'test-secret');
     assert.equal(url.href.includes('test-secret'), false);
     return Response.json({success: true, data: {offers: [{...offer, payoutUsd: 2}], currency: {name: 'Robux', perUsd: 70}, pagination: {pages: 3}}});
@@ -47,6 +49,74 @@ test('offers target the visitor, preserve the provider rate, and expose no secre
   assert.equal(data.offers[0].payoutUsd, undefined);
   assert.equal(data.hasMore, true);
   assert.equal(JSON.stringify(data).includes('test-secret'), false);
+});
+
+const survey = { ...offer, name: 'Survey · 5 min', categories: ['survey'], reward: 15 };
+function surveyRequest(query = '') {
+  const request = new Request('https://worker.test/api/offers?userId=Player_One' + query);
+  request.cf = { country: 'CA' };
+  return request;
+}
+function catalogue(offers, pages = 1, rate = 100) {
+  return Response.json({ success: true, data: { offers, currency: { name: 'Robux', perUsd: rate }, pagination: { pages } } });
+}
+test('default surveys exclude large game totals and variable quotes, finding small rewards on later provider pages', async t => {
+  const calls = [];
+  t.mock.method(globalThis, 'fetch', async input => {
+    const url = new URL(input);
+    calls.push(Number(url.searchParams.get('page')));
+    assert.equal(url.searchParams.get('category'), 'survey');
+    assert.equal(url.searchParams.get('type'), 'singlestep');
+    assert.equal(url.searchParams.get('limit'), '200');
+    assert.equal(url.searchParams.get('sort'), 'popular');
+    return catalogue(calls.length === 1 ? [
+      {...survey, id: 1, reward: 210}, {...offer, id: 2, reward: 51000, type: 'multistep'},
+      {...survey, id: 3, reward: 10, rewardIsVariable: true},
+      {...survey, id: 4, reward: 50, type: 'multistep'},
+      {...offer, id: 5, name: 'Survey Game', reward: 15}
+    ] : [15, 30, 50, 100].reverse().map((reward, i) => ({...survey, id: i + 10, reward})), 2);
+  });
+  const data = await (await handleOffers(surveyRequest(), { OFFERWALL_SECRET: 'test' })).json();
+  assert.deepEqual(calls, [1, 2]);
+  assert.deepEqual(data.offers.map(item => item.reward), [15, 30, 50, 100]);
+  assert.ok(data.offers.every(item => item.rewardKind === 'estimate'));
+  assert.equal(data.hasMore, false);
+  assert.equal(data.category, 'survey');
+});
+test('reward filters preserve exact amounts, apply before pagination, and include variable partners only under Any reward', async t => {
+  t.mock.method(globalThis, 'fetch', async () => catalogue([
+    ...[0, 15, 15.0001, 30, 30.0001, 50, 50.0001, 100, 100.0001].map((reward, id) => ({...survey, id: id + 1, reward})),
+    {...survey, id: 50, reward: 1, rewardIsVariable: true}
+  ]));
+  for (const limit of [15, 30, 50, 100]) {
+    const data = await (await handleOffers(surveyRequest('&maxReward=' + limit), {OFFERWALL_SECRET: 'test'})).json();
+    assert.ok(data.offers.every(item => item.reward > 0 && item.reward <= limit && item.rewardKind === 'estimate'));
+    assert.equal(data.offers.at(-1).reward, limit);
+  }
+  const any = await (await handleOffers(surveyRequest('&maxReward=any'), {OFFERWALL_SECRET: 'test'})).json();
+  assert.equal(any.offers.at(-1).rewardKind, 'variable');
+  assert.ok(any.offers.some(item => item.reward === 100.0001));
+  t.mock.method(globalThis, 'fetch', async () => catalogue(Array.from({length: 25}, (_, i) => ({...survey, id: i + 1, reward: 25 - i}))));
+  const page2 = await (await handleOffers(surveyRequest('&page=2&maxReward=30'), {OFFERWALL_SECRET: 'test'})).json();
+  assert.deepEqual(page2.offers.map(item => item.reward), Array.from({length: 12}, (_, i) => 13 + i));
+  assert.equal(page2.hasMore, true);
+});
+test('invalid filters never contact the provider; empty inventory does not fall back to games', async t => {
+  let calls = 0;
+  t.mock.method(globalThis, 'fetch', async () => { calls++; return catalogue([], 0); });
+  for (const query of ['&category=casino', '&maxReward=51000', '&page=0']) {
+    assert.equal((await handleOffers(surveyRequest(query), {OFFERWALL_SECRET: 'test'})).status, 400);
+  }
+  assert.equal(calls, 0);
+  const data = await (await handleOffers(surveyRequest(), {OFFERWALL_SECRET: 'test'})).json();
+  assert.deepEqual(data.offers, []);
+  assert.equal(data.hasMore, false);
+});
+test('incomplete catalogues and mid-scan currency changes fail instead of hiding small surveys', async t => {
+  t.mock.method(globalThis, 'fetch', async () => catalogue([survey], 11));
+  assert.equal((await handleOffers(surveyRequest(), {OFFERWALL_SECRET: 'test'})).status, 503);
+  t.mock.method(globalThis, 'fetch', async input => catalogue([survey], 2, new URL(input).searchParams.get('page') === '1' ? 100 : 70));
+  assert.equal((await handleOffers(surveyRequest(), {OFFERWALL_SECRET: 'test'})).status, 503);
 });
 test('missing geolocation and incorrect currency fail closed instead of displaying wrong prices', async t => {
   const request = new Request('https://worker.test/api/offers?userId=Player_One');
