@@ -102,10 +102,32 @@ test('reward filters preserve exact amounts, apply before pagination, and includ
   assert.deepEqual(page2.offers.map(item => item.reward), Array.from({length: 12}, (_, i) => 13 + i));
   assert.equal(page2.hasMore, true);
 });
+test('distinct reward ranges change the first page even with more than twelve low-paying surveys', async t => {
+  const values = [...Array.from({length: 14}, (_, i) => i + 1), 15, 15.0001, 30, 30.0001, 50, 50.0001, 100, 100.0001];
+  t.mock.method(globalThis, 'fetch', async () => catalogue([
+    ...values.map((reward, i) => ({...survey, id: i + 1, reward})),
+    {...survey, id: 100, reward: 25, rewardIsVariable: true}
+  ]));
+  const firstPageIds = new Set();
+  for (const [min, max, expected, total] of [
+    [0, 15, Array.from({length: 12}, (_, i) => i + 1), 15],
+    [15, 30, [15.0001, 30], 2], [30, 50, [30.0001, 50], 2], [50, 100, [50.0001, 100], 2]
+  ]) {
+    const data = await (await handleOffers(surveyRequest('&minReward=' + min + '&maxReward=' + max), {OFFERWALL_SECRET: 'test'})).json();
+    assert.deepEqual(data.offers.map(item => item.reward), expected);
+    assert.equal(data.total, total);
+    assert.equal(data.hasMore, total > 12);
+    for (const item of data.offers) { assert.equal(firstPageIds.has(item.id), false); firstPageIds.add(item.id); }
+  }
+  const second = await (await handleOffers(surveyRequest('&minReward=0&maxReward=15&page=2'), {OFFERWALL_SECRET: 'test'})).json();
+  assert.deepEqual(second.offers.map(item => item.reward), [13, 14, 15]);
+  assert.equal(second.total, 15);
+  assert.equal(second.hasMore, false);
+});
 test('invalid filters never contact the provider; empty inventory does not fall back to games', async t => {
   let calls = 0;
   t.mock.method(globalThis, 'fetch', async () => { calls++; return catalogue([], 0); });
-  for (const query of ['&category=casino', '&maxReward=51000', '&page=0']) {
+  for (const query of ['&category=casino', '&maxReward=51000', '&page=0', '&minReward=-1', '&minReward=30&maxReward=15', '&minReward=15&maxReward=any']) {
     assert.equal((await handleOffers(surveyRequest(query), {OFFERWALL_SECRET: 'test'})).status, 400);
   }
   assert.equal(calls, 0);

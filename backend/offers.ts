@@ -34,8 +34,11 @@ export async function handleOffers(request: Request, env: { OFFERWALL_SECRET?: s
   const page = Number(query.get('page') || 1);
   const category = query.get('category') || 'survey';
   const maxReward = query.get('maxReward') || '100';
+  const minReward = query.get('minReward') || '0';
   if (!validUser(user) || !Number.isSafeInteger(page) || page < 1 || page > 10000 ||
-      !['survey', 'all'].includes(category) || !['15', '30', '50', '100', 'any'].includes(maxReward))
+      !['survey', 'all'].includes(category) || !['15', '30', '50', '100', 'any'].includes(maxReward) ||
+      !['0', '15', '30', '50'].includes(minReward) ||
+      (minReward !== '0' && !['15:30', '30:50', '50:100'].includes(minReward + ':' + maxReward)))
     return Response.json({ error: 'Invalid offer request.' }, { status: 400 });
   if (!env.OFFERWALL_SECRET) return Response.json({ error: 'Offers are temporarily unavailable.' }, { status: 503 });
   const url = new URL('https://offerwall.gg/api/v1/offers');
@@ -85,16 +88,18 @@ export async function handleOffers(request: Request, env: { OFFERWALL_SECRET?: s
     }
     let presented = [...new Map(offers.filter(allowedOffer).map(offer => [offer.id, presentOffer(offer, user)])).values()];
     let hasMore = data.pages > page;
+    let total: number | undefined;
     if (surveys) {
       presented = presented.filter(offer => maxReward === 'any' ||
-        (offer.rewardKind !== 'variable' && offer.reward > 0 && offer.reward <= Number(maxReward)));
+        (offer.rewardKind !== 'variable' && offer.reward > Number(minReward) && offer.reward <= Number(maxReward)));
       presented.sort((a, b) => Number(a.rewardKind === 'variable') - Number(b.rewardKind === 'variable') || a.reward - b.reward || a.id - b.id);
+      total = presented.length;
       hasMore = presented.length > page * PAGE_SIZE;
       presented = presented.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
     }
     return Response.json({
       offers: presented, currency: { name: 'Robux', perUsd: data.rate },
-      category, maxReward: surveys ? maxReward : 'any', page, hasMore
+      category, minReward: surveys ? Number(minReward) : 0, maxReward: surveys ? maxReward : 'any', total, page, hasMore
     });
   } catch {
     return Response.json({ error: 'Live offer prices are unavailable. Retry or open Offerwall.GG.' }, { status: 503 });

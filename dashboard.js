@@ -146,7 +146,7 @@
   let offerPage = 1;
   let offerSearch = '';
   let offerCategory = 'survey';
-  let offerMaxReward = '100';
+  let offerRewardRange = '0-100';
   function wallUrl() {
     const url = new URL('https://offerwall.gg/wall/' + publicKey);
     url.searchParams.set('userId', username || guestId);
@@ -184,8 +184,9 @@
     const timer = setTimeout(() => controller.abort(), 15000);
     try {
       const url = new URL(offersUrl);
+      const [minReward, maxReward] = offerRewardRange === 'any' ? ['0', 'any'] : offerRewardRange.split('-');
       url.search = new URLSearchParams({ userId: username || guestId, page: offerPage, search: offerSearch,
-        category: offerCategory, maxReward: offerMaxReward });
+        category: offerCategory, minReward, maxReward });
       const response = await fetch(url, { signal: controller.signal, cache: 'no-store', credentials: 'omit' });
       const data = await response.json();
       if (!response.ok) throw new Error(data.error || 'Could not load live offers.');
@@ -212,8 +213,9 @@
       }
       $('offerList').append(fragment);
       $('offerRate').textContent = 'Current provider rate: ' + format(data.currency.perUsd) + ' Robux per US$1 of confirmed earnings.';
+      const rangeLabel = $('offerMaxReward').selectedOptions[0].textContent;
       $('wallStatus').textContent = offerCategory === 'survey'
-        ? (data.offers.length ? 'Live surveys, smallest listed rewards first. Amounts are estimates, not guaranteed payouts.' : 'No surveys match this reward filter for your location and device right now. Try Any reward, clear your search, or check back later.')
+        ? (data.offers.length ? 'Live surveys: ' + rangeLabel + '. Showing ' + data.offers.length + ' of ' + (data.total ?? data.offers.length) + ' matches. Amounts are estimates, not guaranteed payouts.' : 'No surveys match ' + rangeLabel + ' for your location and device right now. Try Any reward, clear your search, or check back later.')
         : (data.offers.length ? 'Live offers allowed by Lootlane\'s provider settings. Review each offer\'s requirements before starting.' : 'No offers match right now. Try another search or check back later.');
       $('offerPage').textContent = 'Page ' + offerPage;
       $('previousOffers').hidden = offerPage <= 1;
@@ -233,7 +235,7 @@
     document.querySelectorAll('[data-offer-category]').forEach(item => item.setAttribute('aria-pressed', String(item === button)));
     offerPage = 1; void loadWall();
   }));
-  $('offerMaxReward').addEventListener('change', () => { offerMaxReward = $('offerMaxReward').value; offerPage = 1; void loadWall(); });
+  $('offerMaxReward').addEventListener('change', () => { offerRewardRange = $('offerMaxReward').value; offerPage = 1; void loadWall(); });
   $('offerSearch').addEventListener('submit', event => { event.preventDefault(); offerSearch = $('offerQuery').value.trim(); offerPage = 1; void loadWall(); });
   $('previousOffers').addEventListener('click', () => { offerPage = Math.max(1, offerPage - 1); void loadWall(); });
   $('nextOffers').addEventListener('click', () => { offerPage++; void loadWall(); });

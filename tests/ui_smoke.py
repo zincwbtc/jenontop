@@ -63,10 +63,10 @@ try:
             if query.get("category") == ["survey"]:
                 offers = [{**offers[1],"id":i,"name":f"Survey {i}","reward":reward}
                           for i, reward in enumerate([15,30,50,100],1)
-                          if query["maxReward"] == ["any"] or reward <= int(query["maxReward"][0])]
+                          if query["maxReward"] == ["any"] or int(query["minReward"][0]) < reward <= int(query["maxReward"][0])]
             if wall_mode["empty"]:
                 offers = []
-            route.fulfill(content_type="application/json", body=json.dumps({"offers":offers,"currency":{"name":"Robux","perUsd":70},"page":1,"hasMore":False}))
+            route.fulfill(content_type="application/json", body=json.dumps({"offers":offers,"total":len(offers),"currency":{"name":"Robux","perUsd":70},"page":1,"hasMore":False}))
         page.route("**/api/offers?*", mock_wall)
         reward_state = {"balance":53,"completedSurveys":1,"providerBalance":3.5,"storeCorrection":49.5}
         def mock_rewards(route):
@@ -97,10 +97,21 @@ try:
             page.mouse.wheel(0, 500 if i % 2 else -500)
             page.wait_for_timeout(70)
         assert len(wall_requests) == 1, "Scrolling must not reload offers"
-        for limit, count in [("15",1),("30",2),("50",3),("100",4)]:
-            page.locator("#offerMaxReward").select_option(limit)
-            expect(page.locator(".live-offer")).to_have_count(count)
-            assert parse_qs(urlparse(wall_requests[-1]).query)["page"] == ["1"]
+        for value, reward in [("0-15",15),("15-30",30),("30-50",50),("50-100",100)]:
+            page.locator("#offerMaxReward").select_option(value)
+            expect(page.locator(".live-offer")).to_have_count(1)
+            expect(page.locator(".offer-amount")).to_have_text(f"Estimated {reward} Robux")
+            expect(page.locator("#wallStatus")).to_contain_text("Showing 1 of 1 matches")
+            query = parse_qs(urlparse(wall_requests[-1]).query)
+            assert query["page"] == ["1"]
+            assert query["minReward"] == [value.split('-')[0]]
+            assert query["maxReward"] == [value.split('-')[1]]
+        page.locator("#offerMaxReward").select_option("0-100")
+        expect(page.locator(".live-offer")).to_have_count(4)
+        page.locator("#offerMaxReward").select_option("any")
+        expect(page.locator("#wallStatus")).to_contain_text("Any reward")
+        page.locator("#offerMaxReward").select_option("0-100")
+        expect(page.locator("#wallStatus")).to_contain_text("All up to 100 Robux")
         page.locator('[data-offer-category="all"]').click()
         expect(page.locator("#surveyRewardFilters")).not_to_be_visible()
         expect(page.locator(".offer-amount").nth(0)).to_have_text("143.125 Robux")

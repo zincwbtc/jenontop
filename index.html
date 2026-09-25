@@ -13,8 +13,8 @@
   <meta property="og:url" content="https://lootlaneblox.com/">
   <meta property="og:title" content="Lootlane Rewards — Surveys &amp; Robux">
   <meta property="og:description" content="Discover live surveys and offers, check estimated Robux rewards, and track your confirmed balance with Lootlane.">
-  <meta property="og:image" content="https://lootlaneblox.com/assets/lootlane-social-v1.png">
-  <meta property="og:image:secure_url" content="https://lootlaneblox.com/assets/lootlane-social-v1.png">
+  <meta property="og:image" content="https://lootlaneblox.com/assets/lootlane-social-v1.png?v=4e11cc7">
+  <meta property="og:image:secure_url" content="https://lootlaneblox.com/assets/lootlane-social-v1.png?v=4e11cc7">
   <meta property="og:image:type" content="image/png">
   <meta property="og:image:width" content="1200">
   <meta property="og:image:height" content="630">
@@ -22,11 +22,11 @@
   <meta name="twitter:card" content="summary_large_image">
   <meta name="twitter:title" content="Lootlane Rewards — Surveys &amp; Robux">
   <meta name="twitter:description" content="Discover live surveys and offers, check estimated Robux rewards, and track your confirmed balance with Lootlane.">
-  <meta name="twitter:image" content="https://lootlaneblox.com/assets/lootlane-social-v1.png">
+  <meta name="twitter:image" content="https://lootlaneblox.com/assets/lootlane-social-v1.png?v=4e11cc7">
   <meta name="twitter:image:alt" content="Lootlane Rewards: Find your next reward. A block-style explorer surrounded by mint coins and floating platforms.">
   <link rel="icon" href="assets/lootlane-mark.svg" type="image/svg+xml">
   <link rel="stylesheet" href="support.css?v=20260924f">
-  <script src="dashboard.js?v=20260924f" defer></script>
+  <script src="dashboard.js?v=20260925a" defer></script>
 </head>
 <body>
   <svg class="icon-library" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
@@ -65,7 +65,7 @@
         <p id="earningIdentity" class="wall-footnote"></p>
         <div class="reward-explainer"><strong>Know what you can earn.</strong><p>Each survey shows its live estimated reward. You must qualify and finish; screening out may pay less or nothing. Reward filters are browsing limits, not promises of a 15, 30, 50 or 100 Robux payout.</p><span id="offerRate">Loading the live Offerwall.GG rate...</span></div>
         <div class="offer-filters" role="group" aria-label="Offer type"><button class="secondary" type="button" data-offer-category="survey" aria-pressed="true">Surveys</button><button class="secondary" type="button" data-offer-category="all" aria-pressed="false">All allowed offers</button></div>
-        <div class="offer-filters" id="surveyRewardFilters"><label for="offerMaxReward">Survey reward</label><select id="offerMaxReward" aria-describedby="surveyFilterNote"><option value="15">Up to 15 Robux</option><option value="30">Up to 30 Robux</option><option value="50">Up to 50 Robux</option><option value="100" selected>Up to 100 Robux</option><option value="any">Any reward</option></select><p id="surveyFilterNote">Smallest listed rewards first. Choose Any reward to include higher estimates and survey partners with variable rewards.</p></div>
+        <div class="offer-filters" id="surveyRewardFilters"><label for="offerMaxReward">Survey reward range</label><select id="offerMaxReward" aria-describedby="surveyFilterNote"><option value="0-100" selected>All up to 100 Robux</option><option value="0-15">Up to 15 Robux</option><option value="15-30">Over 15 to 30 Robux</option><option value="30-50">Over 30 to 50 Robux</option><option value="50-100">Over 50 to 100 Robux</option><option value="any">Any reward</option></select><p id="surveyFilterNote">Choose a range to see surveys within that range. Smallest listed rewards first. Any reward also includes higher estimates and variable rewards.</p></div>
         <form class="offer-search" id="offerSearch"><label for="offerQuery">Search this view</label><input id="offerQuery" type="search" maxlength="80" placeholder="Search available surveys or offers"><button class="secondary" type="submit">Search</button></form>
         <p id="wallStatus" class="offer-status" role="status">Getting your rewards ready...</p>
         <div class="offer-grid" id="offerList" aria-label="Available offers"></div>
