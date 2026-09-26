@@ -168,3 +168,12 @@ textarea{min-height:95px;resize:vertical}
  .support{right:14px;bottom:14px}.support-toggle{min-height:44px;padding:10px 14px}.login-dialog{padding:30px 22px}
 }
 @media(prefers-reduced-motion:reduce){*,*::before,*::after{animation:none!important;transition:none!important;scroll-behavior:auto!important}}
+/* Survey cards: stand out from the page so kids spot where to go. */
+.live-offer{position:relative;border:2px solid transparent;border-radius:18px;background:linear-gradient(160deg,#1d4a40,#12303a) padding-box,linear-gradient(135deg,#91edc8,#ffd166 55%,#91edc8) border-box;box-shadow:0 0 0 1px #91edc833,0 10px 28px #0009,0 0 26px #91edc82e;transition:transform .15s ease,box-shadow .15s ease}
+.live-offer:hover,.live-offer:focus-within{transform:translateY(-3px);box-shadow:0 0 0 1px #ffd16666,0 14px 34px #000a,0 0 36px #ffd16640}
+.live-offer h3{font-size:18px;color:#fff}
+.live-offer .tag{background:#ffd16622;border-color:#ffd16677;color:#ffd166;font-weight:800}
+.live-offer .offer-amount{display:inline-block;font-size:24px;font-weight:900;color:#0b2a22;background:linear-gradient(135deg,#ffd166,#ffe7a3);padding:6px 14px;border-radius:12px;box-shadow:0 4px 14px #ffd16640}
+.live-offer .card-link{margin-top:0;padding:14px;border:0;border-radius:12px;background:linear-gradient(135deg,#91edc8,#5fd9a8);color:#082019;font-size:15px;font-weight:900;min-height:50px;box-shadow:0 6px 16px #91edc840}
+.live-offer .card-link:hover{filter:brightness(1.08)}
+@media (prefers-reduced-motion:reduce){.live-offer{transition:none}.live-offer:hover,.live-offer:focus-within{transform:none}}

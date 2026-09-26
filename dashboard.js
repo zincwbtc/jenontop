@@ -2,8 +2,9 @@
   'use strict';
   const publicKey = 'c6e9d79d42b4ff5990ee1e9dbc1d7039';
   const cloudflareOrigin = 'https://lootlane-test-backend.brycen0407.workers.dev';
-  // GitHub Pages serves the .com frontend; the API stays on Cloudflare.
-  const apiOrigin = cloudflareOrigin;
+  // On lootlaneblox.com the API is served from the same domain (lootlaneblox.com/api/*), which phones,
+  // in-app browsers and school filters don't block the way they can block *.workers.dev.
+  const apiOrigin = location.hostname === 'lootlaneblox.com' ? location.origin : cloudflareOrigin;
   const rewardsUrl = apiOrigin + '/api/rewards';
   const withdrawUrl = apiOrigin + '/api/withdraw';
   const offersUrl = apiOrigin + '/api/offers';
@@ -186,8 +187,18 @@
       const [minReward, maxReward] = offerRewardRange === 'any' ? ['0', 'any'] : offerRewardRange.split('-');
       url.search = new URLSearchParams({ userId: username || guestId, page: offerPage, search: offerSearch,
         category: offerCategory, minReward, maxReward });
-      const response = await fetch(url, { signal: controller.signal, cache: 'no-store', credentials: 'omit' });
-      const data = await response.json();
+      let response;
+      try {
+        response = await fetch(url, { signal: controller.signal, cache: 'no-store', credentials: 'omit' });
+      } catch (networkError) {
+        if (controller.signal.aborted) throw networkError;
+        // Phones drop requests now and then ("Load failed"). Try once more, via the backup address.
+        await new Promise(resolve => setTimeout(resolve, 600));
+        if (offersRequest !== controller) return;
+        const backup = new URL(cloudflareOrigin + '/api/offers'); backup.search = url.search;
+        response = await fetch(backup, { signal: controller.signal, cache: 'no-store', credentials: 'omit' });
+      }
+      const data = await response.json().catch(() => ({}));
       if (!response.ok) throw new Error(data.error || 'Could not load live offers.');
       if (offersRequest !== controller) return;
       if (!Array.isArray(data.offers) || data.currency?.name !== 'Robux') throw new Error('Live offer prices are unavailable.');
@@ -221,7 +232,8 @@
       $('nextOffers').hidden = !data.hasMore;
     } catch (error) {
       if (offersRequest !== controller) return;
-      $('wallStatus').textContent = error.name === 'AbortError' ? 'Offers timed out. Retry or use the provider link above.' : error.message;
+      $('wallStatus').textContent = error.name === 'AbortError' ? 'Offers timed out. Tap Search again or use the provider link above.'
+        : error instanceof TypeError ? 'Could not reach the survey list. Check your connection and tap Search again.' : error.message;
       $('offerRate').textContent = 'Live rate unavailable. No estimated fallback prices are shown.';
     } finally {
       clearTimeout(timer);
